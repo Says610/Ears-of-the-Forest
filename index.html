@@ -6,35 +6,35 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
   <!-- HUD -->
   <div id="hud">
-    <div id="healthBarContainer">
+    <div id="healthContainer">
+      <span>Health</span>
       <div id="healthBar"></div>
     </div>
     <div id="batteryContainer">
+      <span>Flashlight</span>
       <div id="batteryLevel"></div>
     </div>
-    <div id="inventoryUI">Inventory: Wood:0 | Scrap:0 | Bandage:0</div>
-    <div id="mapUI">Map Placeholder</div>
-    <div id="cutsceneOverlay"></div>
+    <div id="inventoryContainer">
+      <span>Inventory</span>
+      <div>Wood: <span id="inventoryWood">0</span></div>
+      <div>Stick: <span id="inventoryStick">0</span></div>
+      <div>Bandage: <span id="inventoryBandage">0</span></div>
+    </div>
   </div>
 
   <!-- Audio Elements -->
-  <audio id="forestAudio" loop>
-    <source src="audio/forest_ambience.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="jumpAudio">
-    <source src="audio/jump_scare.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="howlAudio">
-    <source src="audio/wolf_howl.mp3" type="audio/mpeg">
-  </audio>
-
-  <!-- Three.js Renderer Canvas -->
-  <canvas id="gameCanvas"></canvas>
+  <audio id="forestAudio" src="assets/audio/forest.mp3" loop></audio>
+  <audio id="howlAudio" src="assets/audio/wolf_howl.mp3"></audio>
+  <audio id="jumpAudio" src="assets/audio/jump_scare.mp3"></audio>
 
   <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
