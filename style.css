@@ -1,14 +1,97 @@
-body { margin:0; overflow:hidden; background:#05050f; font-family:Arial,sans-serif; }
+/* ================== General Page ================== */
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background: #000;
+}
 
-#hud { position:absolute; top:10px; left:10px; color:white; font-size:14px; display:flex; gap:15px; }
-#inventoryUI { position:absolute; bottom:10px; left:10px; color:white; font-size:14px; }
-#dialogue { position:absolute; bottom:90px; left:50%; transform:translateX(-50%);
-            background: rgba(0,0,0,0.85); color:white; padding:10px; display:none; width:60%; font-size:16px; border-radius:5px;}
-#choices { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); text-align:center; }
-#choices button { margin:5px; padding:6px 10px; font-size:14px; cursor:pointer; border-radius:4px; }
-#ending { position:absolute; top:30%; width:100%; text-align:center; font-size:32px;
-          color:white; display:none; background: rgba(0,0,0,0.7); padding:20px; border-radius:8px; }
+/* ================== HUD ================== */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  color: white;
+  z-index: 100;
+}
 
-button:hover { background-color: rgba(255,255,255,0.2); }
+/* Health Bar */
+#healthBarContainer {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 200px;
+  height: 20px;
+  border: 2px solid white;
+}
+#healthBar {
+  width: 100%;
+  height: 100%;
+  background: red;
+}
 
-#keybinds { position:absolute; top:70px; left:10px; color:white; font-size:12px; opacity:0.6; }
+/* Flashlight Battery */
+#batteryContainer {
+  position: absolute;
+  top: 40px;
+  left: 10px;
+  width: 100px;
+  height: 15px;
+  border: 2px solid white;
+}
+#batteryLevel {
+  width: 100%;
+  height: 100%;
+  background: yellow;
+}
+
+/* Inventory */
+#inventoryUI {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 5px 10px;
+  border-radius: 5px;
+  display: none;
+}
+
+/* Map */
+#mapUI {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 5px 10px;
+  border-radius: 5px;
+  display: none;
+}
+
+/* Cutscene Overlay */
+#cutsceneOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  opacity: 0;
+  z-index: 500;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+/* ================== Canvas ================== */
+canvas#gameCanvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ================== Flash Effects for Jump Scare ================== */
+body.flashRed {
+  background: red !important;
+}
