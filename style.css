@@ -64,4 +64,12 @@ body, html {
   font-weight: bold;
   text-shadow: 0 0 5px #000;
 }
+#controlsContainer {
+  margin-top: 10px;
+  background: rgba(0,0,0,0.5);
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
 
