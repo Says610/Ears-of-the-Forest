@@ -7,20 +7,33 @@
 </head>
 <body>
 
+<!-- HUD -->
 <div id="hud">
-  <span id="health">Health: 100</span>
-  <span id="weapon">Weapon: Rifle</span>
-  <span id="inventory">Ammo: ∞</span>
+  <div id="health">Health: 100</div>
+  <div id="compass">N</div>
+  <div id="battery">Flashlight: 100%</div>
 </div>
 
+<!-- Inventory -->
+<div id="inventoryUI">Wood: 0 | Scrap: 0</div>
+
+<!-- Dialogue -->
 <div id="dialogue"></div>
 <div id="choices"></div>
+
+<!-- Ending -->
 <div id="ending"></div>
 
-<audio id="growl" src="https://cdn.pixabay.com/audio/2022/03/15/audio_7e3b58a7f3.mp3"></audio>
-<audio id="shot" src="https://cdn.pixabay.com/audio/2022/03/10/audio_6b1f1b2e45.mp3"></audio>
+<!-- Audio -->
+<audio id="forest" src="audio/forest.mp3" loop></audio>
+<audio id="howl" src="audio/wolf_howl.mp3"></audio>
+<audio id="shot" src="audio/shot.mp3"></audio>
 
+<!-- Three.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<!-- Main Script -->
 <script src="script.js"></script>
 </body>
 </html>
