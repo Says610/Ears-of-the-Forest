@@ -1,11 +1,11 @@
-body { margin:0; overflow:hidden; background:black; font-family:Arial,sans-serif; }
+body { margin:0; overflow:hidden; background:#05050f; font-family:Arial,sans-serif; }
 
 #hud { position:absolute; top:10px; left:10px; color:white; font-size:14px; display:flex; gap:15px; }
 #inventoryUI { position:absolute; bottom:10px; left:10px; color:white; font-size:14px; }
 #dialogue { position:absolute; bottom:90px; left:50%; transform:translateX(-50%);
-            background: rgba(0,0,0,0.85); color:white; padding:10px; display:none; width:60%; font-size:16px; }
+            background: rgba(0,0,0,0.85); color:white; padding:10px; display:none; width:60%; font-size:16px; border-radius:5px;}
 #choices { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); text-align:center; }
-#choices button { margin:5px; padding:6px 10px; font-size:14px; cursor:pointer; }
+#choices button { margin:5px; padding:6px 10px; font-size:14px; cursor:pointer; border-radius:4px; }
 #ending { position:absolute; top:30%; width:100%; text-align:center; font-size:32px;
-          color:white; display:none; background: rgba(0,0,0,0.7); padding:20px; }
+          color:white; display:none; background: rgba(0,0,0,0.7); padding:20px; border-radius:8px; }
 button:hover { background-color: rgba(255,255,255,0.2); }
