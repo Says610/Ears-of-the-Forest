@@ -8,4 +8,7 @@ body { margin:0; overflow:hidden; background:#05050f; font-family:Arial,sans-ser
 #choices button { margin:5px; padding:6px 10px; font-size:14px; cursor:pointer; border-radius:4px; }
 #ending { position:absolute; top:30%; width:100%; text-align:center; font-size:32px;
           color:white; display:none; background: rgba(0,0,0,0.7); padding:20px; border-radius:8px; }
+
 button:hover { background-color: rgba(255,255,255,0.2); }
+
+#keybinds { position:absolute; top:70px; left:10px; color:white; font-size:12px; opacity:0.6; }
