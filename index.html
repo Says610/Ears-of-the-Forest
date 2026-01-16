@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ears of the Forest</title>
+    <title>Ears of the Forest - Survival Horror</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +11,7 @@
     <div id="loading-screen">
         <div class="loader-container">
             <div class="loader"></div>
+            <div class="loader-inner"></div>
         </div>
         <h1 class="game-title">EARS OF THE FOREST</h1>
         <p class="game-subtitle">A Survival Horror Experience</p>
@@ -19,31 +20,222 @@
             <div class="progress-bar" id="progress-bar"></div>
         </div>
         
-        <div class="loading-text" id="loading-text">Starting...</div>
+        <div class="loading-text" id="loading-text">Initializing game systems...</div>
+        <div class="loading-tip" id="loading-tip">Keep your flashlight charged and watch for wolf howls</div>
     </div>
 
     <!-- Game Canvas -->
-    <canvas id="game-canvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
     <!-- Game UI -->
-    <div id="game-ui"></div>
+    <div id="game-ui">
+        <!-- Stats Panel -->
+        <div class="stats-panel">
+            <div class="stat">
+                <div class="stat-icon">❤️</div>
+                <div class="stat-info">
+                    <div class="stat-name">HEALTH</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill health-bar" id="health-bar"></div>
+                    </div>
+                </div>
+                <div class="stat-value" id="health-value">100</div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">🍎</div>
+                <div class="stat-info">
+                    <div class="stat-name">HUNGER</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill hunger-bar" id="hunger-bar"></div>
+                    </div>
+                </div>
+                <div class="stat-value" id="hunger-value">100</div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">💧</div>
+                <div class="stat-info">
+                    <div class="stat-name">THIRST</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill thirst-bar" id="thirst-bar"></div>
+                    </div>
+                </div>
+                <div class="stat-value" id="thirst-value">100</div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">🌡️</div>
+                <div class="stat-info">
+                    <div class="stat-name">TEMPERATURE</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill temp-bar" id="temp-bar"></div>
+                    </div>
+                </div>
+                <div class="stat-value" id="temp-value">37°C</div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-info">
+                    <div class="stat-name">STAMINA</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill stamina-bar" id="stamina-bar"></div>
+                    </div>
+                </div>
+                <div class="stat-value" id="stamina-value">100</div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">😨</div>
+                <div class="stat-info">
+                    <div class="stat-name">FEAR</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill fear-bar" id="fear-bar"></div>
+                    </div>
+                </div>
+                <div class="stat-value" id="fear-value">5</div>
+            </div>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div class="inventory-panel">
+            <div class="inventory-title">INVENTORY</div>
+            <div class="inventory-item">
+                <span>🔦 Flashlight:</span>
+                <span class="item-count" id="inventory-battery">100%</span>
+            </div>
+            <div class="inventory-item">
+                <span>💊 Medkits:</span>
+                <span class="item-count" id="inventory-medkits">1</span>
+            </div>
+            <div class="inventory-item">
+                <span>🔋 Batteries:</span>
+                <span class="item-count" id="inventory-batteries">2</span>
+            </div>
+            <div class="inventory-item">
+                <span>🍓 Berries:</span>
+                <span class="item-count" id="inventory-berries">0</span>
+            </div>
+            <div class="inventory-item">
+                <span>🍄 Mushrooms:</span>
+                <span class="item-count" id="inventory-mushrooms">0</span>
+            </div>
+            <div class="inventory-item">
+                <span>🪵 Sticks:</span>
+                <span class="item-count" id="inventory-sticks">0</span>
+            </div>
+        </div>
+
+        <!-- Controls Hint -->
+        <div id="controls-hint">
+            WASD: Move | Mouse: Look | Shift: Sprint | C: Crouch | F: Flashlight | 
+            E: Interact | M: Eat Mushroom | N: Eat Berries | R: Drink | H: Heal | B: Battery | ESC: Pause
+        </div>
+
+        <!-- Crosshair -->
+        <div class="crosshair">
+            <div class="crosshair-dot"></div>
+        </div>
+
+        <!-- Message Log -->
+        <div class="message-log" id="message-log"></div>
+
+        <!-- Notification -->
+        <div class="notification" id="notification">
+            <div class="notification-text" id="notification-text"></div>
+        </div>
+
+        <!-- Dialogue Choices -->
+        <div class="dialogue-choices" id="dialogue-choices">
+            <div class="dialogue-question" id="dialogue-question"></div>
+            <div class="dialogue-option" onclick="game.selectDialogue(0)"></div>
+            <div class="dialogue-option" onclick="game.selectDialogue(1)"></div>
+            <div class="dialogue-option" onclick="game.selectDialogue(2)"></div>
+        </div>
+    </div>
 
     <!-- Visual Effects -->
     <div class="damage-flash" id="damage-flash"></div>
     <div class="fear-overlay" id="fear-overlay"></div>
     <div class="vignette"></div>
+    <div class="breathing-effect"></div>
     
     <!-- Jump Scare -->
-    <div class="jump-scare" id="jump-scare"></div>
-
-    <!-- UI Elements -->
-    <div id="controls-hint">
-        WASD: Move | Mouse: Look | Shift: Sprint | F: Flashlight | C: Crouch | H: Heal
+    <div class="jump-scare" id="jump-scare">
+        <div class="jump-scare-content"></div>
     </div>
-    
+
+    <!-- Cutscenes -->
+    <div class="cutscene" id="cutscene-start">
+        <div class="cutscene-title">THE BEGINNING</div>
+        <div class="cutscene-text">
+            "This school trip is going to be awesome!" you said to your friend.<br>
+            You both were excited to explore the ancient forest...<br><br>
+            But now, the sun is setting, and you're lost.<br>
+            The sounds of the forest are changing...
+        </div>
+        <div class="cutscene-subtext">
+            Find your way out before it's too late.
+        </div>
+        <div class="cutscene-skip">Press ESC to skip</div>
+    </div>
+
+    <div class="cutscene" id="cutscene-good">
+        <div class="cutscene-title">GOOD ENDING</div>
+        <div class="cutscene-text">
+            You made it out alive!<br><br>
+            You and your friend celebrate at home,<br>
+            grateful to have survived the nightmare forest.<br>
+            You'll never forget what you saw...
+        </div>
+        <div class="cutscene-subtext">
+            But at least you made it out together.
+        </div>
+    </div>
+
+    <div class="cutscene" id="cutscene-bad">
+        <div class="cutscene-title">BAD ENDING</div>
+        <div class="cutscene-text">
+            The wolves were too many...<br><br>
+            They surrounded you and your friend.<br>
+            The last thing you heard were the screams...<br>
+            The forest claimed more victims.
+        </div>
+        <div class="cutscene-subtext">
+            The forest's hunger is never satisfied.
+        </div>
+    </div>
+
+    <div class="cutscene" id="cutscene-secret">
+        <div class="cutscene-title">SECRET ENDING</div>
+        <div class="cutscene-text">
+            You found the Heartseed Tree...<br><br>
+            It spoke to you, showed you the forest's memories.<br>
+            You felt its pain, its loneliness.<br>
+            Slowly, you became one with the forest...
+        </div>
+        <div class="cutscene-subtext">
+            Now you watch over it, forever.
+        </div>
+    </div>
+
+    <!-- Audio Toggle -->
     <button id="audio-toggle">🔊</button>
 
-    <!-- Import Three.js from CDN -->
+    <!-- Pause Menu -->
+    <div class="pause-menu" id="pause-menu">
+        <h1 class="pause-title">PAUSED</h1>
+        <button class="pause-button" onclick="game.resumeGame()">RESUME</button>
+        <button class="pause-button secondary" onclick="game.restartGame()">RESTART</button>
+        <button class="pause-button secondary" onclick="game.quitToMenu()">QUIT TO MENU</button>
+    </div>
+
+    <!-- End Screen -->
+    <div class="end-screen" id="end-screen">
+        <h1 class="end-title" id="end-title"></h1>
+        <div class="end-message" id="end-message"></div>
+        <div class="end-stats" id="end-stats"></div>
+        <button class="end-button" onclick="game.restartGame()">PLAY AGAIN</button>
+        <button class="end-button secondary" onclick="game.quitToMenu()">MAIN MENU</button>
+    </div>
+
+    <!-- Import Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <!-- Main Game Script -->
