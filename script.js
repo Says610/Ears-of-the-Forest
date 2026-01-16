@@ -1,5 +1,5 @@
 // =========================================================
-// EARS OF THE FOREST - MAIN GAME SCRIPT
+// EARS OF THE FOREST - COMPLETE GAME SCRIPT
 // =========================================================
 
 class EarsOfTheForest {
@@ -70,8 +70,13 @@ class EarsOfTheForest {
         this.berries = [];
         this.mushrooms = [];
         this.sticks = [];
+        this.waterSources = [];
+        this.campfires = [];
         this.flashlight = null;
         this.sunLight = null;
+        this.cave = null;
+        this.heartseedTree = null;
+        this.bossWolf = null;
         
         // Weather system
         this.weather = {
@@ -88,18 +93,28 @@ class EarsOfTheForest {
             berries: 0,
             mushrooms: 0,
             sticks: 0,
-            water: 0
+            water: 0,
+            survivalKit: false
         };
         
         // Story flags
         this.story = {
+            helpedClassmate: false,
+            exploredCave: false,
+            foundSecret: false,
+            bossDefeated: false,
+            foundHeartseed: false,
             wolvesEncountered: 0,
-            itemsCollected: 0
+            itemsCollected: 0,
+            escapeFound: false
         };
         
         // Wolf AI timers
         this.wolfEvents = {
             firstChase: false,
+            packAttack: false,
+            hordeAttack: false,
+            bossSpawned: false,
             timer: 0
         };
         
@@ -115,6 +130,11 @@ class EarsOfTheForest {
         
         // Cutscene state
         this.currentCutscene = null;
+        
+        // Dialogue system
+        this.dialogueOptions = [];
+        this.onDialogueSelect = null;
+        this.isInDialogue = false;
     }
     
     // ===============================
@@ -133,8 +153,8 @@ class EarsOfTheForest {
         const loadingSteps = [
             { text: "Initializing graphics...", progress: 20 },
             { text: "Creating 3D world...", progress: 40 },
-            { text: "Setting up game systems...", progress: 60 },
-            { text: "Loading user interface...", progress: 80 },
+            { text: "Setting up survival systems...", progress: 60 },
+            { text: "Loading AI and story...", progress: 80 },
             { text: "Finalizing...", progress: 95 }
         ];
         
@@ -173,11 +193,11 @@ class EarsOfTheForest {
         // Show random tips
         if (Math.random() < 0.3) {
             const tips = [
-                "Keep your hunger and thirst above 20%",
+                "Press C to craft Survival Kit from battery + medkit",
                 "Some mushrooms are poisonous!",
-                "Listen for wolf howls",
-                "Stay near campfires when cold",
-                "Use flashlight sparingly"
+                "Build campfires with 3 sticks",
+                "Collect water from streams",
+                "Find the Heartseed Tree for secret ending"
             ];
             if (loadingTip && tips.length > 0) {
                 loadingTip.textContent = "Tip: " + tips[Math.floor(Math.random() * tips.length)];
@@ -258,7 +278,7 @@ class EarsOfTheForest {
         this.scene.add(ground);
         
         // Trees
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 40; i++) {
             const x = (Math.random() - 0.5) * 180;
             const z = (Math.random() - 0.5) * 180;
             
@@ -286,7 +306,7 @@ class EarsOfTheForest {
         }
         
         // Berries
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 15; i++) {
             const x = (Math.random() - 0.5) * 150;
             const z = (Math.random() - 0.5) * 150;
             
@@ -304,13 +324,14 @@ class EarsOfTheForest {
         }
         
         // Mushrooms
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 12; i++) {
             const x = (Math.random() - 0.5) * 150;
             const z = (Math.random() - 0.5) * 150;
             
             const mushroomGeometry = new THREE.ConeGeometry(0.15, 0.3, 6);
+            const isPoisonous = Math.random() < 0.3;
             const mushroomMaterial = new THREE.MeshStandardMaterial({ 
-                color: Math.random() < 0.3 ? 0x9900ff : 0xffaa00
+                color: isPoisonous ? 0x9900ff : 0xffaa00
             });
             const mushroom = new THREE.Mesh(mushroomGeometry, mushroomMaterial);
             mushroom.position.set(x, 0.15, z);
@@ -320,12 +341,74 @@ class EarsOfTheForest {
                 mesh: mushroom,
                 position: new THREE.Vector3(x, 0, z),
                 collected: false,
-                poisonous: Math.random() < 0.3
+                poisonous: isPoisonous
+            });
+        }
+        
+        // Sticks
+        for (let i = 0; i < 10; i++) {
+            const x = (Math.random() - 0.5) * 150;
+            const z = (Math.random() - 0.5) * 150;
+            
+            const stickGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 4);
+            const stickMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const stick = new THREE.Mesh(stickGeometry, stickMaterial);
+            stick.position.set(x, 0.25, z);
+            stick.rotation.x = Math.random() * Math.PI;
+            
+            this.scene.add(stick);
+            this.sticks.push({
+                mesh: stick,
+                position: new THREE.Vector3(x, 0, z),
+                collected: false
+            });
+        }
+        
+        // Water sources (streams)
+        for (let i = 0; i < 3; i++) {
+            const x = (Math.random() - 0.5) * 100;
+            const z = (Math.random() - 0.5) * 100;
+            
+            const waterGeometry = new THREE.PlaneGeometry(3, 10);
+            const waterMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3366cc,
+                transparent: true,
+                opacity: 0.7
+            });
+            const water = new THREE.Mesh(waterGeometry, waterMaterial);
+            water.rotation.x = -Math.PI / 2;
+            water.position.set(x, -0.95, z);
+            
+            this.scene.add(water);
+            this.waterSources.push({
+                mesh: water,
+                position: new THREE.Vector3(x, -1, z),
+                radius: 2
+            });
+        }
+        
+        // Campfire spots
+        for (let i = 0; i < 4; i++) {
+            const x = (Math.random() - 0.5) * 100;
+            const z = (Math.random() - 0.5) * 100;
+            
+            // Campfire base (stones)
+            const stoneGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.2, 8);
+            const stoneMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
+            const stones = new THREE.Mesh(stoneGeometry, stoneMaterial);
+            stones.position.set(x, -0.9, z);
+            this.scene.add(stones);
+            
+            this.campfires.push({
+                position: new THREE.Vector3(x, -0.9, z),
+                active: false,
+                radius: 3,
+                stones: stones
             });
         }
         
         // Wolves
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
             const x = (Math.random() - 0.5) * 100;
             const z = (Math.random() - 0.5) * 100;
             
@@ -341,10 +424,21 @@ class EarsOfTheForest {
                 position: new THREE.Vector3(x, 0, z),
                 target: new THREE.Vector3(x, 0, z),
                 speed: 2,
+                state: 'idle',
                 health: 50,
-                attackCooldown: 0
+                attackCooldown: 0,
+                lastHowl: 0
             });
         }
+        
+        // Create cave (at fixed location)
+        this.createCave();
+        
+        // Create Heartseed Tree
+        this.createHeartseedTree();
+        
+        // Create boss wolf in cave
+        this.createBossWolf();
         
         // Flashlight
         this.flashlight = new THREE.SpotLight(0xffffff, 2, 50, Math.PI / 6, 0.5, 1);
@@ -354,7 +448,115 @@ class EarsOfTheForest {
         this.camera.add(this.flashlight.target);
     }
     
+    createCave() {
+        const caveX = 80;
+        const caveZ = 80;
+        
+        // Cave entrance (simple hole)
+        const caveGeometry = new THREE.CylinderGeometry(3, 4, 4, 16);
+        const caveMaterial = new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 0.9
+        });
+        const cave = new THREE.Mesh(caveGeometry, caveMaterial);
+        cave.position.set(caveX, 0, caveZ);
+        cave.castShadow = true;
+        
+        this.scene.add(cave);
+        this.cave = {
+            mesh: cave,
+            position: new THREE.Vector3(caveX, 0, caveZ),
+            radius: 4,
+            explored: false
+        };
+    }
+    
+    createHeartseedTree() {
+        const treeX = -80;
+        const treeZ = -80;
+        
+        // Unique glowing tree
+        const trunkGeometry = new THREE.CylinderGeometry(1, 1.5, 10, 12);
+        const trunkMaterial = new THREE.MeshStandardMaterial({
+            color: 0x4a2e1f,
+            emissive: 0x330000
+        });
+        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+        trunk.position.set(treeX, 5, treeZ);
+        
+        // Glowing leaves
+        const leavesGeometry = new THREE.SphereGeometry(4, 12, 12);
+        const leavesMaterial = new THREE.MeshStandardMaterial({
+            color: 0x00ff00,
+            emissive: 0x003300,
+            transparent: true,
+            opacity: 0.8
+        });
+        const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+        leaves.position.set(treeX, 11, treeZ);
+        
+        this.scene.add(trunk);
+        this.scene.add(leaves);
+        
+        this.heartseedTree = {
+            trunk,
+            leaves,
+            position: new THREE.Vector3(treeX, 0, treeZ),
+            radius: 6,
+            found: false
+        };
+    }
+    
+    createBossWolf() {
+        const x = 85;
+        const z = 85;
+        
+        const bossGeometry = new THREE.BoxGeometry(2.5, 1.2, 3.5);
+        const bossMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            emissive: 0x330000
+        });
+        const bossWolf = new THREE.Mesh(bossGeometry, bossMaterial);
+        bossWolf.position.set(x, 0.6, z);
+        bossWolf.castShadow = true;
+        
+        this.scene.add(bossWolf);
+        
+        this.bossWolf = {
+            mesh: bossWolf,
+            position: new THREE.Vector3(x, 0, z),
+            target: new THREE.Vector3(x, 0, z),
+            speed: 2.5,
+            state: 'idle',
+            health: 150,
+            attackDamage: 25,
+            lastRoar: 0
+        };
+    }
+    
+    // ===============================
+    // UI MANAGEMENT
+    // ===============================
+    
     initUI() {
+        // Add coordinates and compass panel
+        const coordsHTML = `
+            <div class="coords-panel">
+                <div class="coords-title">POSITION</div>
+                <div id="coords">X: 0, Z: 0</div>
+                <div id="compass">N</div>
+            </div>
+            
+            <div class="dialogue-choices" id="dialogue-choices">
+                <div class="dialogue-question" id="dialogue-question"></div>
+                <div class="dialogue-option" id="dialogue-option-0"></div>
+                <div class="dialogue-option" id="dialogue-option-1"></div>
+                <div class="dialogue-option" id="dialogue-option-2"></div>
+            </div>
+        `;
+        
+        document.getElementById('game-ui').innerHTML += coordsHTML;
+        
         // Cache UI elements
         this.ui = {
             healthBar: document.getElementById('health-bar'),
@@ -371,330 +573,52 @@ class EarsOfTheForest {
             fearValue: document.getElementById('fear-value'),
             notification: document.getElementById('notification'),
             notificationText: document.getElementById('notification-text'),
-            messageLog: document.getElementById('message-log')
+            messageLog: document.getElementById('message-log'),
+            coords: document.getElementById('coords'),
+            compass: document.getElementById('compass'),
+            dialogueChoices: document.getElementById('dialogue-choices'),
+            dialogueQuestion: document.getElementById('dialogue-question'),
+            dialogueOptions: [
+                document.getElementById('dialogue-option-0'),
+                document.getElementById('dialogue-option-1'),
+                document.getElementById('dialogue-option-2')
+            ]
         };
-    }
-    
-    initInput() {
-        const canvas = document.getElementById('gameCanvas');
         
-        // Pointer lock
-        canvas.addEventListener('click', () => {
-            if (!this.isPaused && !this.isInCutscene) {
-                canvas.requestPointerLock();
+        // Add CSS for coordinates panel
+        const style = document.createElement('style');
+        style.textContent = `
+            .coords-panel {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 10px 15px;
+                border-radius: 8px;
+                border: 1px solid rgba(76, 175, 80, 0.3);
+                backdrop-filter: blur(10px);
+                text-align: center;
+                min-width: 120px;
             }
-        });
-        
-        document.addEventListener('pointerlockchange', () => {
-            this.isPointerLocked = document.pointerLockElement === canvas;
-        });
-        
-        // Mouse look
-        document.addEventListener('mousemove', (e) => {
-            if (!this.isPointerLocked || this.isPaused || this.isInCutscene) return;
-            
-            this.cameraRotation.x += e.movementY * this.sensitivity;
-            this.cameraRotation.y += e.movementX * this.sensitivity;
-            
-            this.cameraRotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.cameraRotation.x));
-        });
-        
-        // Keyboard
-        document.addEventListener('keydown', (e) => {
-            this.keys[e.code] = true;
-            this.updateInput();
-            
-            if (this.isPaused || this.isInCutscene) {
-                if (e.code === 'Escape' && this.isInCutscene) {
-                    this.skipCutscene();
-                }
-                return;
+            .coords-title {
+                color: #8BC34A;
+                font-size: 0.8rem;
+                margin-bottom: 5px;
+                font-weight: bold;
             }
-            
-            switch(e.code) {
-                case 'KeyF':
-                    this.toggleFlashlight();
-                    break;
-                case 'KeyH':
-                    this.useMedkit();
-                    break;
-                case 'KeyB':
-                    this.useBattery();
-                    break;
-                case 'KeyE':
-                    this.interact();
-                    break;
-                case 'KeyN':
-                    this.eatBerries();
-                    break;
-                case 'KeyM':
-                    this.eatMushroom();
-                    break;
-                case 'KeyR':
-                    this.drinkWater();
-                    break;
-                case 'Escape':
-                    this.togglePause();
-                    break;
+            #coords {
+                color: white;
+                font-size: 0.9rem;
+                margin-bottom: 3px;
             }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            this.keys[e.code] = false;
-            this.updateInput();
-        });
-        
-        // Audio toggle
-        document.getElementById('audio-toggle').addEventListener('click', () => {
-            this.audioEnabled = !this.audioEnabled;
-            document.getElementById('audio-toggle').textContent = this.audioEnabled ? '🔊' : '🔇';
-        });
-        
-        // Pause menu buttons
-        document.getElementById('resume-btn').addEventListener('click', () => this.resumeGame());
-        document.getElementById('restart-btn').addEventListener('click', () => this.restartGame());
-        document.getElementById('menu-btn').addEventListener('click', () => this.quitToMenu());
-        
-        // End screen buttons
-        document.getElementById('end-restart-btn').addEventListener('click', () => this.restartGame());
-        document.getElementById('end-menu-btn').addEventListener('click', () => this.quitToMenu());
-    }
-    
-    updateInput() {
-        this.input.forward = this.keys['KeyW'] || this.keys['ArrowUp'];
-        this.input.backward = this.keys['KeyS'] || this.keys['ArrowDown'];
-        this.input.left = this.keys['KeyA'] || this.keys['ArrowLeft'];
-        this.input.right = this.keys['KeyD'] || this.keys['ArrowRight'];
-        this.input.sprint = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
-        this.input.crouch = this.keys['KeyC'];
-    }
-    
-    // ===============================
-    // GAME LOOP
-    // ===============================
-    
-    startGame() {
-        console.log("🎮 Game started!");
-        this.isRunning = true;
-        this.showNotification("You're lost in the forest. Find your way out!");
-        this.addMessage("Game started - Survive and escape!");
-        this.gameLoop();
-    }
-    
-    gameLoop() {
-        if (!this.isRunning) return;
-        
-        const delta = this.clock.getDelta();
-        this.gameTime += delta;
-        
-        if (!this.isPaused && !this.isInCutscene) {
-            this.updatePlayer(delta);
-            this.updateCamera();
-            this.updateStats(delta);
-            this.updateWolves(delta);
-            this.updateWorld(delta);
-            this.checkEvents();
-            this.updateUI();
-        }
-        
-        this.renderer.render(this.scene, this.camera);
-        requestAnimationFrame(() => this.gameLoop());
-    }
-    
-    updatePlayer(delta) {
-        // Movement speed
-        let targetSpeed = this.player.movementSpeed;
-        if (this.input.crouch) {
-            targetSpeed = this.player.crouchSpeed;
-            this.player.isCrouching = true;
-        } else {
-            this.player.isCrouching = false;
-            if (this.input.sprint && this.player.stamina > 0) {
-                targetSpeed = this.player.sprintSpeed;
+            #compass {
+                color: #4CAF50;
+                font-size: 1.2rem;
+                font-weight: bold;
             }
-        }
-        
-        this.player.currentSpeed += (targetSpeed - this.player.currentSpeed) * 10 * delta;
-        
-        // Movement direction
-        const forward = new THREE.Vector3();
-        const right = new THREE.Vector3();
-        
-        this.camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
-        right.crossVectors(this.camera.up, forward).normalize();
-        
-        this.player.velocity.set(0, 0, 0);
-        
-        if (this.input.forward) this.player.velocity.addScaledVector(forward, this.player.currentSpeed);
-        if (this.input.backward) this.player.velocity.addScaledVector(forward, -this.player.currentSpeed);
-        if (this.input.left) this.player.velocity.addScaledVector(right, -this.player.currentSpeed);
-        if (this.input.right) this.player.velocity.addScaledVector(right, this.player.currentSpeed);
-        
-        // Gravity
-        if (!this.player.onGround) {
-            this.player.velocity.y -= 20 * delta;
-        }
-        
-        // Jump
-        if (this.keys['Space'] && this.player.onGround) {
-            this.player.velocity.y = 8;
-            this.player.onGround = false;
-            this.player.stamina -= 20;
-        }
-        
-        // Move player
-        this.player.position.addScaledVector(this.player.velocity, delta);
-        
-        // Ground check
-        if (this.player.position.y < 1.7) {
-            this.player.position.y = 1.7;
-            this.player.velocity.y = 0;
-            this.player.onGround = true;
-        }
-        
-        // Keep in bounds
-        const bounds = 95;
-        this.player.position.x = Math.max(-bounds, Math.min(bounds, this.player.position.x));
-        this.player.position.z = Math.max(-bounds, Math.min(bounds, this.player.position.z));
+        `;
+        document.head.appendChild(style);
     }
-    
-    updateStats(delta) {
-        // Stamina
-        if (this.input.sprint && this.player.stamina > 0 && 
-            (this.input.forward || this.input.backward || this.input.left || this.input.right)) {
-            this.player.stamina -= 20 * delta;
-        } else if (this.player.stamina < this.player.maxStamina) {
-            this.player.stamina += 10 * delta;
-        }
-        this.player.stamina = Math.max(0, Math.min(this.player.maxStamina, this.player.stamina));
-        
-        // Battery
-        if (this.input.flashlight && this.player.battery > 0) {
-            this.player.battery -= 5 * delta;
-            if (this.flashlight) {
-                this.flashlight.intensity = Math.max(0.2, this.player.battery / 100 * 2);
-            }
-            if (this.player.battery <= 0) {
-                this.input.flashlight = false;
-                if (this.flashlight) this.flashlight.intensity = 0;
-                this.showNotification("Flashlight dead!");
-            }
-        }
-        this.player.battery = Math.max(0, Math.min(this.player.maxBattery, this.player.battery));
-        
-        // Hunger
-        this.player.hunger -= 0.2 * delta;
-        if (this.input.sprint) this.player.hunger -= 0.1 * delta;
-        this.player.hunger = Math.max(0, this.player.hunger);
-        
-        // Thirst
-        this.player.thirst -= 0.3 * delta;
-        if (this.input.sprint) this.player.thirst -= 0.2 * delta;
-        this.player.thirst = Math.max(0, this.player.thirst);
-        
-        // Temperature
-        this.player.temperature -= 0.05 * delta;
-        if (this.weather.isRaining) this.player.temperature -= 0.1 * delta;
-        this.player.temperature = Math.max(35, Math.min(40, this.player.temperature));
-        
-        // Fear
-        this.player.fear += 0.5 * delta;
-        this.player.fear = Math.min(this.player.maxFear, this.player.fear);
-        
-        // Health effects
-        if (this.player.hunger < 20) {
-            this.player.health -= 0.3 * delta;
-        }
-        if (this.player.thirst < 20) {
-            this.player.health -= 0.5 * delta;
-        }
-        if (this.player.temperature < 36) {
-            this.player.health -= 0.3 * delta;
-            this.player.hypothermia = true;
-        } else {
-            this.player.hypothermia = false;
-        }
-        if (this.player.poisoned) {
-            this.player.health -= 1 * delta;
-        }
-        
-        // Random damage (for testing)
-        if (Math.random() < 0.001) {
-            this.player.health -= 5;
-            this.showDamageFlash();
-        }
-        
-        if (this.player.health <= 0) {
-            this.triggerBadEnding();
-        }
-    }
-    
-    updateWolves(delta) {
-        this.wolfEvents.timer += delta;
-        
-        // First wolf event at 3 minutes
-        if (!this.wolfEvents.firstChase && this.wolfEvents.timer > 60) {
-            this.wolfEvents.firstChase = true;
-            this.addMessage("You hear a wolf howl in the distance...");
-        }
-        
-        for (const wolf of this.wolves) {
-            const distance = this.player.position.distanceTo(wolf.position);
-            
-            if (distance < 20) {
-                // Chase player
-                const direction = new THREE.Vector3()
-                    .subVectors(this.player.position, wolf.position)
-                    .normalize();
-                
-                wolf.position.addScaledVector(direction, wolf.speed * delta);
-                wolf.mesh.position.copy(wolf.position);
-                wolf.mesh.position.y = 0.4;
-                
-                // Attack
-                if (distance < 2) {
-                    wolf.attackCooldown -= delta;
-                    if (wolf.attackCooldown <= 0) {
-                        this.player.health -= 15;
-                        wolf.attackCooldown = 2;
-                        this.showDamageFlash();
-                        this.addMessage("A wolf attacks you!");
-                        this.story.wolvesEncountered++;
-                    }
-                }
-            }
-        }
-    }
-    
-    updateWorld(delta) {
-        // Update weather time
-        this.weather.timeOfDay = (this.weather.timeOfDay + delta / 120) % 24;
-        
-        // Random weather changes
-        if (Math.random() < 0.001) {
-            this.weather.isRaining = !this.weather.isRaining;
-            this.addMessage(this.weather.isRaining ? "It starts to rain..." : "The rain stops");
-        }
-    }
-    
-    checkEvents() {
-        // Escape condition (reach edge of map)
-        if (this.player.position.z < -90) {
-            this.triggerGoodEnding();
-        }
-    }
-    
-    updateCamera() {
-        this.camera.rotation.x = -this.cameraRotation.x;
-        this.camera.rotation.y = -this.cameraRotation.y;
-        this.camera.position.copy(this.player.position);
-    }
-    
-    // ===============================
-    // UI UPDATES
-    // ===============================
     
     updateUI() {
         // Update stat bars
@@ -722,6 +646,17 @@ class EarsOfTheForest {
         document.getElementById('inventory-mushrooms').textContent = this.inventory.mushrooms;
         document.getElementById('inventory-sticks').textContent = this.inventory.sticks;
         document.getElementById('inventory-battery').textContent = Math.round(this.player.battery) + '%';
+        
+        // Update coordinates and compass
+        if (this.ui.coords) {
+            this.ui.coords.textContent = `X: ${Math.round(this.player.position.x)}, Z: ${Math.round(this.player.position.z)}`;
+        }
+        if (this.ui.compass) {
+            const angle = this.camera.rotation.y * (180/Math.PI);
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round((((angle % 360) + 360) % 360) / 45) % 8;
+            this.ui.compass.textContent = directions[index];
+        }
         
         // Update fear overlay
         const fearOverlay = document.getElementById('fear-overlay');
@@ -796,6 +731,440 @@ class EarsOfTheForest {
     }
     
     // ===============================
+    // DIALOGUE SYSTEM
+    // ===============================
+    
+    showDialogue(question, options, callback) {
+        this.isInDialogue = true;
+        this.onDialogueSelect = callback;
+        
+        if (this.ui.dialogueChoices && this.ui.dialogueQuestion) {
+            this.ui.dialogueQuestion.textContent = question;
+            
+            for (let i = 0; i < 3; i++) {
+                if (this.ui.dialogueOptions[i]) {
+                    if (options[i]) {
+                        this.ui.dialogueOptions[i].textContent = options[i];
+                        this.ui.dialogueOptions[i].style.display = 'block';
+                        this.ui.dialogueOptions[i].onclick = () => this.selectDialogue(i);
+                    } else {
+                        this.ui.dialogueOptions[i].style.display = 'none';
+                    }
+                }
+            }
+            
+            this.ui.dialogueChoices.style.display = 'block';
+        }
+    }
+    
+    selectDialogue(index) {
+        if (this.ui.dialogueChoices) {
+            this.ui.dialogueChoices.style.display = 'none';
+        }
+        
+        this.isInDialogue = false;
+        
+        if (this.onDialogueSelect) {
+            this.onDialogueSelect(index);
+        }
+    }
+    
+    // ===============================
+    // INPUT SYSTEM
+    // ===============================
+    
+    initInput() {
+        const canvas = document.getElementById('gameCanvas');
+        
+        // Pointer lock
+        canvas.addEventListener('click', () => {
+            if (!this.isPaused && !this.isInCutscene && !this.isInDialogue) {
+                canvas.requestPointerLock();
+            }
+        });
+        
+        document.addEventListener('pointerlockchange', () => {
+            this.isPointerLocked = document.pointerLockElement === canvas;
+        });
+        
+        // Mouse look
+        document.addEventListener('mousemove', (e) => {
+            if (!this.isPointerLocked || this.isPaused || this.isInCutscene || this.isInDialogue) return;
+            
+            this.cameraRotation.x += e.movementY * this.sensitivity;
+            this.cameraRotation.y += e.movementX * this.sensitivity;
+            
+            this.cameraRotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.cameraRotation.x));
+        });
+        
+        // Keyboard input
+        document.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            this.updateInput();
+            
+            if (this.isPaused || this.isInCutscene || this.isInDialogue) {
+                if (e.code === 'Escape') {
+                    if (this.isInCutscene) this.skipCutscene();
+                    else if (this.isInDialogue) {
+                        this.ui.dialogueChoices.style.display = 'none';
+                        this.isInDialogue = false;
+                    }
+                    else this.togglePause();
+                }
+                return;
+            }
+            
+            switch(e.code) {
+                case 'KeyF':
+                    this.toggleFlashlight();
+                    break;
+                case 'KeyH':
+                    this.useMedkit();
+                    break;
+                case 'KeyB':
+                    this.useBattery();
+                    break;
+                case 'KeyE':
+                    this.interact();
+                    break;
+                case 'KeyN':
+                    this.eatBerries();
+                    break;
+                case 'KeyM':
+                    this.eatMushroom();
+                    break;
+                case 'KeyR':
+                    this.drinkWater();
+                    break;
+                case 'KeyC':
+                    this.craftSurvivalKit();
+                    break;
+                case 'Escape':
+                    this.togglePause();
+                    break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+            this.updateInput();
+        });
+        
+        // Audio toggle
+        document.getElementById('audio-toggle').addEventListener('click', () => {
+            this.audioEnabled = !this.audioEnabled;
+            document.getElementById('audio-toggle').textContent = this.audioEnabled ? '🔊' : '🔇';
+        });
+        
+        // Pause menu buttons
+        document.getElementById('resume-btn').addEventListener('click', () => this.resumeGame());
+        document.getElementById('restart-btn').addEventListener('click', () => this.restartGame());
+        document.getElementById('menu-btn').addEventListener('click', () => this.quitToMenu());
+        
+        // End screen buttons
+        document.getElementById('end-restart-btn').addEventListener('click', () => this.restartGame());
+        document.getElementById('end-menu-btn').addEventListener('click', () => this.quitToMenu());
+    }
+    
+    updateInput() {
+        this.input.forward = this.keys['KeyW'] || this.keys['ArrowUp'];
+        this.input.backward = this.keys['KeyS'] || this.keys['ArrowDown'];
+        this.input.left = this.keys['KeyA'] || this.keys['ArrowLeft'];
+        this.input.right = this.keys['KeyD'] || this.keys['ArrowRight'];
+        this.input.sprint = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
+        this.input.crouch = this.keys['KeyC'];
+    }
+    
+    // ===============================
+    // GAME LOOP
+    // ===============================
+    
+    startGame() {
+        console.log("🎮 Game started!");
+        this.isRunning = true;
+        this.showNotification("You're lost in the forest. Find your way out!");
+        this.addMessage("Game started - Survive and escape!");
+        this.gameLoop();
+    }
+    
+    gameLoop() {
+        if (!this.isRunning) return;
+        
+        const delta = this.clock.getDelta();
+        this.gameTime += delta;
+        
+        if (!this.isPaused && !this.isInCutscene && !this.isInDialogue) {
+            this.updatePlayer(delta);
+            this.updateCamera();
+            this.updateStats(delta);
+            this.updateWolves(delta);
+            this.updateBossWolf(delta);
+            this.updateWeather(delta);
+            this.updateWorld(delta);
+            this.checkEvents();
+            this.updateUI();
+        }
+        
+        this.renderer.render(this.scene, this.camera);
+        requestAnimationFrame(() => this.gameLoop());
+    }
+    
+    updatePlayer(delta) {
+        // Movement speed
+        let targetSpeed = this.player.movementSpeed;
+        if (this.input.crouch) {
+            targetSpeed = this.player.crouchSpeed;
+            this.player.isCrouching = true;
+        } else {
+            this.player.isCrouching = false;
+            if (this.input.sprint && this.player.stamina > 0) {
+                targetSpeed = this.player.sprintSpeed;
+            }
+        }
+        
+        this.player.currentSpeed += (targetSpeed - this.player.currentSpeed) * 10 * delta;
+        
+        // Movement direction
+        const forward = new THREE.Vector3();
+        const right = new THREE.Vector3();
+        
+        this.camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+        right.crossVectors(this.camera.up, forward).normalize();
+        
+        this.player.velocity.set(0, 0, 0);
+        
+        if (this.input.forward) this.player.velocity.addScaledVector(forward, this.player.currentSpeed);
+        if (this.input.backward) this.player.velocity.addScaledVector(forward, -this.player.currentSpeed);
+        if (this.input.left) this.player.velocity.addScaledVector(right, -this.player.currentSpeed);
+        if (this.input.right) this.player.velocity.addScaledVector(right, this.player.currentSpeed);
+        
+        // Gravity
+        if (!this.player.onGround) {
+            this.player.velocity.y -= 20 * delta;
+        }
+        
+        // Jump
+        if (this.keys['Space'] && this.player.onGround && this.player.stamina > 10) {
+            this.player.velocity.y = 8;
+            this.player.onGround = false;
+            this.player.stamina -= 10;
+        }
+        
+        // Move player
+        this.player.position.addScaledVector(this.player.velocity, delta);
+        
+        // Ground check
+        if (this.player.position.y < 1.7) {
+            this.player.position.y = 1.7;
+            this.player.velocity.y = 0;
+            this.player.onGround = true;
+        }
+        
+        // Keep in bounds
+        const bounds = 95;
+        this.player.position.x = Math.max(-bounds, Math.min(bounds, this.player.position.x));
+        this.player.position.z = Math.max(-bounds, Math.min(bounds, this.player.position.z));
+    }
+    
+    updateStats(delta) {
+        // Stamina
+        if (this.input.sprint && this.player.stamina > 0 && 
+            (this.input.forward || this.input.backward || this.input.left || this.input.right)) {
+            this.player.stamina -= 20 * delta;
+        } else if (this.player.stamina < this.player.maxStamina) {
+            this.player.stamina += 10 * delta;
+        }
+        this.player.stamina = Math.max(0, Math.min(this.player.maxStamina, this.player.stamina));
+        
+        // Exhaustion
+        this.player.isExhausted = this.player.stamina < 10;
+        
+        // Battery
+        if (this.input.flashlight && this.player.battery > 0) {
+            this.player.battery -= 5 * delta;
+            if (this.flashlight) {
+                this.flashlight.intensity = Math.max(0.2, this.player.battery / 100 * 2);
+            }
+            if (this.player.battery <= 0) {
+                this.input.flashlight = false;
+                if (this.flashlight) this.flashlight.intensity = 0;
+                this.showNotification("Flashlight dead!");
+            }
+        }
+        this.player.battery = Math.max(0, Math.min(this.player.maxBattery, this.player.battery));
+        
+        // Hunger
+        this.player.hunger -= 0.2 * delta;
+        if (this.input.sprint) this.player.hunger -= 0.1 * delta;
+        this.player.hunger = Math.max(0, this.player.hunger);
+        
+        // Thirst
+        this.player.thirst -= 0.3 * delta;
+        if (this.input.sprint) this.player.thirst -= 0.2 * delta;
+        this.player.thirst = Math.max(0, this.player.thirst);
+        
+        // Temperature
+        this.player.temperature -= 0.05 * delta;
+        if (this.weather.isRaining) this.player.temperature -= 0.1 * delta;
+        
+        // Check for campfire warmth
+        if (this.isNearActiveCampfire()) {
+            this.player.temperature += 0.3 * delta;
+        }
+        
+        this.player.temperature = Math.max(35, Math.min(40, this.player.temperature));
+        
+        // Fear
+        this.player.fear += 0.5 * delta;
+        this.player.fear = Math.min(this.player.maxFear, this.player.fear);
+        
+        // Health effects
+        if (this.player.hunger < 20) {
+            this.player.health -= 0.3 * delta;
+            if (Math.random() < 0.01) this.addMessage("You're starving!");
+        }
+        if (this.player.thirst < 20) {
+            this.player.health -= 0.5 * delta;
+            if (Math.random() < 0.01) this.addMessage("You're dehydrated!");
+        }
+        if (this.player.temperature < 36) {
+            this.player.health -= 0.3 * delta;
+            this.player.hypothermia = true;
+            if (Math.random() < 0.01) this.addMessage("You're freezing!");
+        } else {
+            this.player.hypothermia = false;
+        }
+        if (this.player.poisoned) {
+            this.player.health -= 1 * delta;
+            if (Math.random() < 0.01) this.addMessage("The poison is spreading...");
+        }
+        
+        // Survival kit bonus
+        if (this.inventory.survivalKit) {
+            // Slow down hunger/thirst depletion
+            this.player.hunger += 0.05 * delta;
+            this.player.thirst += 0.05 * delta;
+        }
+        
+        if (this.player.health <= 0) {
+            this.triggerBadEnding();
+        }
+    }
+    
+    updateWolves(delta) {
+        this.wolfEvents.timer += delta;
+        
+        // Timed wolf events
+        if (!this.wolfEvents.firstChase && this.wolfEvents.timer > 60) {
+            this.wolfEvents.firstChase = true;
+            this.addMessage("A wolf howls in the distance...");
+        }
+        if (!this.wolfEvents.packAttack && this.wolfEvents.timer > 180) {
+            this.wolfEvents.packAttack = true;
+            this.addMessage("Multiple wolves surround you!");
+            this.player.fear += 20;
+        }
+        if (!this.wolfEvents.hordeAttack && this.wolfEvents.timer > 300) {
+            this.wolfEvents.hordeAttack = true;
+            this.addMessage("A horde of wolves closes in!");
+            this.player.fear += 30;
+        }
+        
+        for (const wolf of this.wolves) {
+            const distance = this.player.position.distanceTo(wolf.position);
+            
+            if (distance < 25) {
+                // Chase player
+                const direction = new THREE.Vector3()
+                    .subVectors(this.player.position, wolf.position)
+                    .normalize();
+                
+                wolf.position.addScaledVector(direction, wolf.speed * delta);
+                wolf.mesh.position.copy(wolf.position);
+                wolf.mesh.position.y = 0.4;
+                
+                // Attack
+                if (distance < 2) {
+                    wolf.attackCooldown -= delta;
+                    if (wolf.attackCooldown <= 0) {
+                        this.player.health -= 15;
+                        wolf.attackCooldown = 2;
+                        this.showDamageFlash();
+                        this.addMessage("A wolf attacks you!");
+                        this.story.wolvesEncountered++;
+                    }
+                }
+            }
+        }
+    }
+    
+    updateBossWolf(delta) {
+        if (!this.bossWolf || this.story.bossDefeated) return;
+        
+        const distance = this.player.position.distanceTo(this.bossWolf.position);
+        
+        if (distance < 40 && !this.story.exploredCave) {
+            // Boss chases if player hasn't explored cave yet
+            const direction = new THREE.Vector3()
+                .subVectors(this.player.position, this.bossWolf.position)
+                .normalize();
+            
+            this.bossWolf.position.addScaledVector(direction, this.bossWolf.speed * delta);
+            this.bossWolf.mesh.position.copy(this.bossWolf.position);
+            this.bossWolf.mesh.position.y = 0.6;
+            
+            // Roar occasionally
+            if (this.gameTime - this.bossWolf.lastRoar > 10) {
+                this.bossWolf.lastRoar = this.gameTime;
+                this.addMessage("A terrifying roar echoes from the cave!");
+                this.player.fear += 15;
+            }
+            
+            // Attack
+            if (distance < 3) {
+                this.player.health -= this.bossWolf.attackDamage * delta;
+                this.showDamageFlash();
+            }
+        }
+    }
+    
+    updateWeather(delta) {
+        // Update time
+        this.weather.timeOfDay = (this.weather.timeOfDay + delta / 120) % 24;
+        
+        // Random weather changes
+        if (Math.random() < 0.001) {
+            this.weather.isRaining = !this.weather.isRaining;
+            this.addMessage(this.weather.isRaining ? "It starts to rain..." : "The rain stops");
+            if (this.weather.isRaining) {
+                this.player.temperature -= 2;
+            }
+        }
+    }
+    
+    updateWorld(delta) {
+        // Update active campfires
+        this.updateCampfires(delta);
+    }
+    
+    updateCampfires(delta) {
+        for (const campfire of this.campfires) {
+            if (campfire.active && campfire.fire) {
+                // Flicker effect
+                campfire.fire.intensity = 1 + Math.sin(this.gameTime * 5) * 0.3;
+                
+                // Burn time
+                campfire.burnTime -= delta;
+                if (campfire.burnTime <= 0) {
+                    this.extinguishCampfire(campfire);
+                }
+            }
+        }
+    }
+    
+    // ===============================
     // GAME ACTIONS
     // ===============================
     
@@ -814,6 +1183,8 @@ class EarsOfTheForest {
             this.inventory.medkits--;
             this.showNotification("Used medkit: +40 health");
             this.addMessage("Applied medical treatment");
+        } else if (this.inventory.medkits === 0) {
+            this.showNotification("No medkits available!");
         }
     }
     
@@ -826,6 +1197,8 @@ class EarsOfTheForest {
             if (this.input.flashlight && this.flashlight) {
                 this.flashlight.intensity = Math.max(0.2, this.player.battery / 100 * 2);
             }
+        } else if (this.inventory.batteries === 0) {
+            this.showNotification("No batteries available!");
         }
     }
     
@@ -836,6 +1209,8 @@ class EarsOfTheForest {
             this.inventory.berries -= berriesToEat;
             this.showNotification(`Ate ${berriesToEat} berries: +${berriesToEat * 15} hunger`);
             this.addMessage("Berries satisfy your hunger");
+        } else {
+            this.showNotification("No berries available!");
         }
     }
     
@@ -853,13 +1228,33 @@ class EarsOfTheForest {
                 this.showNotification("Edible mushroom: +25 hunger");
                 this.addMessage("The mushroom was safe to eat");
             }
+        } else {
+            this.showNotification("No mushrooms available!");
         }
     }
     
     drinkWater() {
-        this.player.thirst = Math.min(this.player.maxThirst, this.player.thirst + 30);
-        this.showNotification("Drank water: +30 thirst");
-        this.addMessage("Water refreshes you");
+        if (this.inventory.water > 0) {
+            this.inventory.water--;
+            this.player.thirst = Math.min(this.player.maxThirst, this.player.thirst + 40);
+            this.showNotification("Drank water: +40 thirst");
+            this.addMessage("Water refreshes you");
+        } else {
+            this.showNotification("No water collected!");
+        }
+    }
+    
+    craftSurvivalKit() {
+        if (this.inventory.batteries >= 1 && this.inventory.medkits >= 1) {
+            this.inventory.batteries--;
+            this.inventory.medkits--;
+            this.inventory.survivalKit = true;
+            this.showNotification("Crafted Survival Kit!");
+            this.addMessage("Combined battery and medkit into survival kit");
+            this.story.foundSecret = true;
+        } else {
+            this.showNotification("Need 1 battery and 1 medkit to craft!");
+        }
     }
     
     interact() {
@@ -896,7 +1291,206 @@ class EarsOfTheForest {
             }
         }
         
+        // Check sticks
+        for (const stick of this.sticks) {
+            if (stick.collected) continue;
+            const distance = playerPos.distanceTo(stick.position);
+            if (distance < 2) {
+                stick.collected = true;
+                this.scene.remove(stick.mesh);
+                this.inventory.sticks++;
+                this.showNotification("Collected a stick");
+                this.story.itemsCollected++;
+                this.addMessage("Picked up a stick");
+                return;
+            }
+        }
+        
+        // Check water sources
+        for (const waterSource of this.waterSources) {
+            const distance = playerPos.distanceTo(waterSource.position);
+            if (distance < 3) {
+                if (this.inventory.water < 3) {
+                    this.inventory.water++;
+                    this.showNotification("Collected water");
+                    this.addMessage("Collected water from stream");
+                } else {
+                    this.showNotification("Water container full!");
+                }
+                return;
+            }
+        }
+        
+        // Check campfires
+        for (const campfire of this.campfires) {
+            const distance = playerPos.distanceTo(campfire.position);
+            if (distance < 3) {
+                if (!campfire.active) {
+                    if (this.inventory.sticks >= 3) {
+                        this.buildCampfire(campfire);
+                    } else {
+                        this.showNotification("Need 3 sticks to build campfire");
+                    }
+                } else {
+                    this.showNotification("Campfire is already burning");
+                }
+                return;
+            }
+        }
+        
+        // Check cave
+        if (this.cave && !this.story.exploredCave) {
+            const distance = playerPos.distanceTo(this.cave.position);
+            if (distance < 5) {
+                this.showDialogue(
+                    "You found a dark cave entrance. Do you want to explore it?",
+                    ["Enter the cave", "Stay outside", "Throw a stone inside"],
+                    (choice) => this.handleCaveChoice(choice)
+                );
+                return;
+            }
+        }
+        
+        // Check Heartseed Tree
+        if (this.heartseedTree && !this.heartseedTree.found) {
+            const distance = playerPos.distanceTo(this.heartseedTree.position);
+            if (distance < 8) {
+                this.heartseedTree.found = true;
+                this.showDialogue(
+                    "The Heartseed Tree pulses with ancient energy. What do you do?",
+                    ["Touch the glowing bark", "Listen to its whispers", "Run away"],
+                    (choice) => this.handleTreeChoice(choice)
+                );
+                return;
+            }
+        }
+        
         this.showNotification("Nothing to interact with here");
+    }
+    
+    buildCampfire(campfire) {
+        this.inventory.sticks -= 3;
+        campfire.active = true;
+        campfire.burnTime = 300; // 5 minutes
+        
+        // Create fire light
+        const fireLight = new THREE.PointLight(0xff6600, 2, 15);
+        fireLight.position.set(campfire.position.x, campfire.position.y + 1, campfire.position.z);
+        this.scene.add(fireLight);
+        
+        // Create fire particles
+        const fireGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+        const fireMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff3300,
+            transparent: true,
+            opacity: 0.8
+        });
+        const fire = new THREE.Mesh(fireGeometry, fireMaterial);
+        fire.position.set(campfire.position.x, campfire.position.y + 0.5, campfire.position.z);
+        this.scene.add(fire);
+        
+        campfire.fire = fire;
+        campfire.light = fireLight;
+        
+        this.showNotification("Built campfire!");
+        this.addMessage("Campfire provides warmth and light");
+    }
+    
+    extinguishCampfire(campfire) {
+        campfire.active = false;
+        if (campfire.fire) {
+            this.scene.remove(campfire.fire);
+        }
+        if (campfire.light) {
+            this.scene.remove(campfire.light);
+        }
+        this.addMessage("The campfire burns out");
+    }
+    
+    isNearActiveCampfire() {
+        const playerPos = this.player.position;
+        for (const campfire of this.campfires) {
+            if (!campfire.active) continue;
+            const distance = playerPos.distanceTo(campfire.position);
+            if (distance < campfire.radius) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    handleCaveChoice(choice) {
+        switch(choice) {
+            case 0: // Enter cave
+                this.story.exploredCave = true;
+                this.story.helpedClassmate = true;
+                this.addMessage("You bravely enter the cave...");
+                this.showNotification("You explore the dark cave");
+                this.player.fear += 20;
+                // Spawn boss wolf if not already
+                if (!this.wolfEvents.bossSpawned) {
+                    this.wolfEvents.bossSpawned = true;
+                    this.addMessage("Something large moves in the darkness...");
+                }
+                break;
+                
+            case 1: // Stay outside
+                this.addMessage("You decide to stay outside the cave");
+                this.showNotification("Better safe than sorry");
+                break;
+                
+            case 2: // Throw stone
+                this.addMessage("You throw a stone into the cave");
+                this.showNotification("You hear something stirring inside...");
+                this.player.fear += 10;
+                break;
+        }
+    }
+    
+    handleTreeChoice(choice) {
+        switch(choice) {
+            case 0: // Touch bark
+                this.addMessage("The tree's energy flows through you...");
+                this.showNotification("You feel connected to the forest");
+                this.player.health += 30;
+                this.player.fear -= 20;
+                this.story.foundHeartseed = true;
+                break;
+                
+            case 1: // Listen to whispers
+                this.triggerSecretEnding();
+                break;
+                
+            case 2: // Run away
+                this.addMessage("You run from the strange tree");
+                this.showNotification("The tree's whispers fade away");
+                this.player.fear += 10;
+                break;
+        }
+    }
+    
+    checkEvents() {
+        // Escape condition (reach edge of map)
+        if (Math.abs(this.player.position.x) > 90 || Math.abs(this.player.position.z) > 90) {
+            if (!this.story.escapeFound) {
+                this.story.escapeFound = true;
+                this.addMessage("You found the edge of the forest!");
+            }
+            
+            // Trigger appropriate ending
+            if (this.story.foundHeartseed) {
+                this.triggerSecretEnding();
+            } else if (this.story.exploredCave && this.story.helpedClassmate) {
+                this.triggerGoodEnding();
+            } else {
+                this.triggerBadEnding();
+            }
+        }
+        
+        // Random jump scare
+        if (Math.random() < 0.0005 && this.player.fear > 50) {
+            this.triggerJumpScare();
+        }
     }
     
     // ===============================
@@ -1000,7 +1594,9 @@ class EarsOfTheForest {
                 Final health: ${Math.round(this.player.health)}<br>
                 Final fear: ${Math.round(this.player.fear)}%<br>
                 Items collected: ${this.story.itemsCollected}<br>
-                Wolves encountered: ${this.story.wolvesEncountered}
+                Wolves encountered: ${this.story.wolvesEncountered}<br>
+                Cave explored: ${this.story.exploredCave ? 'Yes' : 'No'}<br>
+                Survival kit crafted: ${this.inventory.survivalKit ? 'Yes' : 'No'}
             `;
             endStats.innerHTML = statsText;
             
