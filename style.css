@@ -1,54 +1,13 @@
-/* =========================================================
-   GLOBAL STYLES
-   ========================================================= */
+/* BASIC BODY */
 body {
   margin: 0;
-  overflow: hidden;
-  background-color: #000000;
+  overflow: hidden; /* prevents default scrollbars */
+  cursor: none; /* hides mouse cursor in-game */
   font-family: Arial, sans-serif;
-  color: white;
+  background: black;
 }
 
-/* =========================
-   HUD
-========================= */
-#hud {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 10px;
-  z-index: 10;
-}
-
-#health, #battery, #inventoryBox {
-  margin: 5px 0;
-  padding: 5px 10px;
-  background: rgba(0,0,0,0.5);
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-/* =========================
-   DIALOGUE CHOICES
-========================= */
-#choiceContainer button {
-  background-color: rgba(30,30,30,0.9);
-  color: #fff;
-  border: 1px solid #fff;
-  padding: 8px 16px;
-  margin: 4px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-#choiceContainer button:hover {
-  background-color: rgba(255,255,255,0.2);
-}
-
-/* =========================
-   BLOCKER / MOUSE LOCK
-========================= */
+/* BLOCKER AND INSTRUCTIONS */
 #blocker {
   position: fixed;
   top: 0;
@@ -68,21 +27,39 @@ body {
   font-size: 24px;
   text-align: center;
   cursor: pointer;
+  user-select: none;
+  z-index: 101;
 }
 
-/* =========================
-   INVENTORY
-========================= */
-#inventoryBox {
-  max-width: 250px;
-  word-wrap: break-word;
+/* HUD */
+#hud {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  color: white;
+  z-index: 200;
+  font-size: 18px;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
-@media (max-width: 768px) {
-  #instructions { font-size: 18px; }
-  #choiceContainer button { font-size: 12px; padding: 6px 12px; }
-  #hud div { font-size: 12px; }
+/* Dialogue Choices */
+#choiceContainer {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 300;
+}
+
+#choiceContainer button {
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* POINTER LOCK HACK */
+html, body {
+  height: 100%;
+  width: 100%;
 }
