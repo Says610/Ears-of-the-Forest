@@ -1,935 +1,858 @@
 /* =========================================================
-   EARS OF THE FOREST - COMPLETE GAME
+   EARS OF THE FOREST - COMPLETE GAME WITH CUTSCENES
 ========================================================= */
 
 // ===============================
-// GAME CONSTANTS & CONFIG
+// CUTSCENE SYSTEM
 // ===============================
-const CONFIG = {
-    // Game settings
-    VERSION: '1.0.0',
-    GAME_TITLE: 'EARS OF THE FOREST',
-    
-    // Player settings
-    PLAYER: {
-        MAX_HEALTH: 100,
-        MAX_STAMINA: 100,
-        MAX_BATTERY: 100,
-        MAX_FEAR: 100,
-        WALK_SPEED: 8.0,
-        SPRINT_SPEED: 14.0,
-        JUMP_FORCE: 8.0,
-        GRAVITY: 9.8
-    },
-    
-    // Wolf settings
-    WOLF: {
-        NORMAL_SPEED: 3,
-        BOSS_SPEED: 4,
-        NORMAL_DAMAGE: 15,
-        BOSS_DAMAGE: 25,
-        STALK_DISTANCE: 30,
-        CHASE_DISTANCE: 20,
-        ATTACK_DISTANCE: 1.8
-    },
-    
-    // Game events (in seconds)
-    EVENTS: {
-        FIRST_WOLF: 180,    // 3 minutes
-        WOLF_PACK: 300,     // 5 minutes
-        WOLF_HORDE: 600,    // 10 minutes
-        BOSS_SPAWN: 450     // 7.5 minutes
-    },
-    
-    // Inventory limits
-    INVENTORY: {
-        MAX_WEIGHT: 50,
-        SLOTS: 20
-    }
-};
-
-// ===============================
-// GAME STATE
-// ===============================
-let GameState = {
-    // Core Three.js objects
-    scene: null,
-    camera: null,
-    renderer: null,
-    clock: null,
-    controls: null,
-    
-    // Player state
-    player: {
-        health: CONFIG.PLAYER.MAX_HEALTH,
-        stamina: CONFIG.PLAYER.MAX_STAMINA,
-        battery: CONFIG.PLAYER.MAX_BATTERY,
-        fear: 5,
-        position: new THREE.Vector3(0, 1.7, 5),
-        rotation: new THREE.Euler(0, 0, 0, 'YXZ'),
-        velocity: new THREE.Vector3(),
-        direction: new THREE.Vector3(),
-        isGrounded: true
-    },
-    
-    // Input state
-    input: {
-        forward: false,
-        backward: false,
-        left: false,
-        right: false,
-        sprint: false,
-        jump: false,
-        flashlight: true
-    },
-    
-    // Game state
-    gameTime: 0,
-    realTime: 0,
-    isPaused: false,
-    isGameOver: false,
-    isInCutscene: false,
-    
-    // Collections
-    wolves: [],
-    trees: [],
-    obstacles: [],
-    items: [],
-    notes: [],
-    
-    // Story flags
-    story: {
-        helpedClassmate: false,
-        exploredCave: false,
-        foundSecret: false,
-        bossDefeated: false,
-        classmateLost: false
-    },
-    
-    // Inventory
-    inventory: {
-        medkits: 1,
-        batteries: 2,
-        batteryPacks: 0,
-        survivalKits: 0,
-        collectedNotes: 0
-    },
-    
-    // Events tracking
-    events: {
-        firstWolfSpawned: false,
-        wolfPackSpawned: false,
-        wolfHordeSpawned: false,
-        bossSpawned: false
-    },
-    
-    // UI references
-    ui: {
-        healthBar: null,
-        staminaBar: null,
-        batteryIcon: null,
-        fearBar: null,
-        timeDisplay: null,
-        objectiveText: null,
-        notification: null
-    },
-    
-    // Audio
-    audio: {
-        listener: null,
-        ambient: null,
-        heartbeat: null,
-        wolfHowl: null,
-        footsteps: null,
-        isMuted: false
-    }
-};
-
-// ===============================
-// WOLF CLASS
-// ===============================
-class Wolf {
-    constructor(x, z, isBoss = false) {
-        this.id = Math.random().toString(36).substr(2, 9);
-        this.isBoss = isBoss;
-        this.position = new THREE.Vector3(x, isBoss ? 0.75 : 0.5, z);
-        this.rotation = new THREE.Euler(0, 0, 0);
-        this.velocity = new THREE.Vector3();
+class CutsceneSystem {
+    constructor() {
+        this.currentCutscene = null;
+        this.cutsceneTime = 0;
+        this.dialogueIndex = 0;
+        this.isPlaying = false;
+        this.onComplete = null;
         
-        // AI state
-        this.state = 'idle'; // idle, stalk, circle, chase, retreat
-        this.targetPosition = null;
-        this.circleAngle = Math.random() * Math.PI * 2;
-        this.attackCooldown = 0;
-        this.fearLevel = 0;
+        // Cutscene definitions
+        this.cutscenes = {
+            opening: this.createOpeningCutscene(),
+            goodEnding: this.createGoodEnding(),
+            badEnding: this.createBadEnding(),
+            secretEnding: this.createSecretEnding()
+        };
         
-        // Stats
-        this.speed = isBoss ? CONFIG.WOLF.BOSS_SPEED : CONFIG.WOLF.NORMAL_SPEED;
-        this.damage = isBoss ? CONFIG.WOLF.BOSS_DAMAGE : CONFIG.WOLF.NORMAL_DAMAGE;
-        this.health = isBoss ? 200 : 100;
-        this.stalkDistance = CONFIG.WOLF.STALK_DISTANCE * (isBoss ? 1.5 : 1);
-        this.chaseDistance = CONFIG.WOLF.CHASE_DISTANCE * (isBoss ? 1.5 : 1);
-        this.attackDistance = CONFIG.WOLF.ATTACK_DISTANCE * (isBoss ? 1.2 : 1);
-        
-        // Visual representation
-        this.createMesh();
+        // Cutscene UI element
+        this.cutsceneUI = this.createCutsceneUI();
     }
     
-    createMesh() {
-        // Create body
-        const bodyGeometry = new THREE.BoxGeometry(
-            this.isBoss ? 2 : 1,
-            this.isBoss ? 1.5 : 1,
-            this.isBoss ? 3 : 2
-        );
+    createCutsceneUI() {
+        const container = document.createElement('div');
+        container.id = 'cutscene-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: 'Cinzel', serif;
+            overflow: hidden;
+        `;
         
-        const bodyMaterial = new THREE.MeshStandardMaterial({
-            color: this.isBoss ? 0x550000 : 0x222222,
-            roughness: 0.9,
-            metalness: 0.1
-        });
+        // Dialogue container
+        const dialogueBox = document.createElement('div');
+        dialogueBox.id = 'cutscene-dialogue';
+        dialogueBox.style.cssText = `
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            border: 2px solid rgba(76, 175, 80, 0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        `;
         
-        this.mesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        this.mesh.position.copy(this.position);
-        this.mesh.castShadow = true;
-        GameState.scene.add(this.mesh);
+        const dialogueText = document.createElement('div');
+        dialogueText.id = 'cutscene-text';
+        dialogueText.style.cssText = `
+            font-size: 1.8rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            min-height: 100px;
+        `;
         
-        // Create eyes
-        const eyeGeometry = new THREE.SphereGeometry(0.08);
-        const eyeMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff0000,
-            emissive: 0xff0000,
-            emissiveIntensity: 0.6
-        });
+        const characterName = document.createElement('div');
+        characterName.id = 'cutscene-character';
+        characterName.style.cssText = `
+            font-size: 1.2rem;
+            color: #4CAF50;
+            margin-top: 10px;
+            font-style: italic;
+        `;
         
-        this.eyeL = new THREE.Mesh(eyeGeometry, eyeMaterial);
-        this.eyeR = new THREE.Mesh(eyeGeometry, eyeMaterial);
-        this.eyeL.position.set(this.isBoss ? 0.3 : 0.2, 0.2, 0.1);
-        this.eyeR.position.set(this.isBoss ? 0.3 : 0.2, 0.2, -0.1);
-        this.mesh.add(this.eyeL);
-        this.mesh.add(this.eyeR);
+        const continuePrompt = document.createElement('div');
+        continuePrompt.id = 'cutscene-continue';
+        continuePrompt.textContent = 'Click to continue...';
+        continuePrompt.style.cssText = `
+            font-size: 1rem;
+            color: #888;
+            margin-top: 20px;
+            animation: pulse 1.5s infinite;
+        `;
+        
+        dialogueBox.appendChild(dialogueText);
+        dialogueBox.appendChild(characterName);
+        dialogueBox.appendChild(continuePrompt);
+        
+        // Cinematic bars
+        const topBar = document.createElement('div');
+        topBar.className = 'cinematic-bar';
+        topBar.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
+            z-index: 1;
+        `;
+        
+        const bottomBar = document.createElement('div');
+        bottomBar.className = 'cinematic-bar';
+        bottomBar.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
+            z-index: 1;
+        `;
+        
+        container.appendChild(topBar);
+        container.appendChild(bottomBar);
+        container.appendChild(dialogueBox);
+        document.body.appendChild(container);
+        
+        // Add click handler
+        container.addEventListener('click', () => this.advanceDialogue());
+        
+        return container;
+    }
+    
+    createOpeningCutscene() {
+        return {
+            name: "Field Trip",
+            duration: 60,
+            dialogues: [
+                {
+                    text: "Wake up, sleepyhead! Today's the big field trip to the national forest!",
+                    character: "Alex",
+                    delay: 1,
+                    audio: "excited"
+                },
+                {
+                    text: "Ugh... five more minutes...",
+                    character: "You",
+                    delay: 2,
+                    audio: "groggy"
+                },
+                {
+                    text: "No way! We're going to see the oldest trees in the state! I heard there's one over 500 years old!",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "excited"
+                },
+                {
+                    text: "Alright, alright, I'm up. Did you pack extra snacks?",
+                    character: "You",
+                    delay: 2,
+                    audio: "normal"
+                },
+                {
+                    text: "Duh! And I brought my new hiking boots. Let's catch the bus before it leaves without us!",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "excited"
+                },
+                {
+                    text: "The bus ride is bumpy but filled with laughter. You and Alex joke about school, teachers, and what you might find in the forest.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "fade"
+                },
+                {
+                    text: "As you enter the forest, the trees tower overhead. The teacher gives instructions...",
+                    character: "Teacher",
+                    delay: 2,
+                    audio: "serious"
+                },
+                {
+                    text: "Stay on the marked paths, stay with your partner, and be back at the bus by 3 PM sharp. No exceptions!",
+                    character: "Teacher",
+                    delay: 3,
+                    audio: "serious"
+                },
+                {
+                    text: "You and Alex decide to explore a bit deeper, convinced you'll find something amazing...",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "fade"
+                },
+                {
+                    text: "Wait... which way did we come from?",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "worried"
+                },
+                {
+                    text: "I thought you were keeping track!",
+                    character: "You",
+                    delay: 2,
+                    audio: "nervous"
+                },
+                {
+                    text: "The path disappears. The trees look the same in every direction. And it's getting darker...",
+                    character: "Narrator",
+                    delay: 4,
+                    effect: "darken"
+                },
+                {
+                    text: "You hear a distant howl. It's not just lost anymore...",
+                    character: "Narrator",
+                    delay: 3,
+                    audio: "wolf_howl",
+                    effect: "shock"
+                },
+                {
+                    text: "Find your way out. Watch for wolves. Use your flashlight wisely.",
+                    character: "Narrator",
+                    delay: 4,
+                    effect: "fade_out"
+                }
+            ],
+            cameraPath: [
+                { x: 0, y: 1.7, z: 10, lookAt: { x: 0, y: 1.7, z: 0 } },
+                { x: 5, y: 2, z: 8, lookAt: { x: 0, y: 1.7, z: 0 } },
+                { x: -5, y: 2, z: 8, lookAt: { x: 0, y: 1.7, z: 0 } },
+                { x: 0, y: 3, z: 15, lookAt: { x: 0, y: 0, z: 0 } },
+                { x: 0, y: 1.7, z: 5, lookAt: { x: 0, y: 1.7, z: 0 } }
+            ],
+            effects: [
+                { time: 0, type: "fade_in", duration: 2 },
+                { time: 55, type: "fade_out", duration: 5 }
+            ]
+        };
+    }
+    
+    createGoodEnding() {
+        return {
+            name: "Safe Return",
+            duration: 45,
+            dialogues: [
+                {
+                    text: "You see it! The edge of the forest! The parking lot!",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "relieved"
+                },
+                {
+                    text: "We made it... we actually made it!",
+                    character: "You",
+                    delay: 2,
+                    audio: "exhausted"
+                },
+                {
+                    text: "The teacher rushes over as you stumble out of the trees. Other students cheer and clap.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "brighten"
+                },
+                {
+                    text: "We were so worried! The search party was about to go in after dark!",
+                    character: "Teacher",
+                    delay: 2,
+                    audio: "relieved"
+                },
+                {
+                    text: "Wolves... there were wolves...",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "traumatized"
+                },
+                {
+                    text: "The ride home is quiet. Everyone is exhausted but safe.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "fade"
+                },
+                {
+                    text: "Later that week, at Alex's house...",
+                    character: "Narrator",
+                    delay: 2,
+                    effect: "scene_change"
+                },
+                {
+                    text: "I still hear the howls in my sleep sometimes.",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "quiet"
+                },
+                {
+                    text: "Me too. But we survived. That's what matters.",
+                    character: "You",
+                    delay: 2,
+                    audio: "reflective"
+                },
+                {
+                    text: "You both raise your hot chocolates in a silent toast. The nightmare is over.",
+                    character: "Narrator",
+                    delay: 4,
+                    effect: "fade_out"
+                },
+                {
+                    text: "GOOD ENDING: SURVIVAL",
+                    character: "",
+                    delay: 3,
+                    effect: "title",
+                    special: true
+                },
+                {
+                    text: "You and Alex made it out alive.\nThe forest taught you the value of friendship\nand the will to survive against all odds.",
+                    character: "",
+                    delay: 5,
+                    effect: "credits"
+                }
+            ],
+            cameraPath: [
+                { x: 0, y: 2, z: 10, lookAt: { x: 0, y: 1.7, z: 0 } },
+                { x: 5, y: 1.5, z: 5, lookAt: { x: 0, y: 1.7, z: 0 } },
+                { x: 0, y: 1.7, z: 3, lookAt: { x: 0, y: 1.7, z: 0 } }
+            ],
+            effects: [
+                { time: 0, type: "fade_in", duration: 2 },
+                { time: 40, type: "fade_out", duration: 5 }
+            ]
+        };
+    }
+    
+    createBadEnding() {
+        return {
+            name: "The Pack's Feast",
+            duration: 40,
+            dialogues: [
+                {
+                    text: "There's too many of them... we're surrounded!",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "panicked"
+                },
+                {
+                    text: "Just keep moving! Don't look back!",
+                    character: "You",
+                    delay: 2,
+                    audio: "desperate"
+                },
+                {
+                    text: "A snarl comes from the left. Then the right. Yellow eyes appear in the darkness.",
+                    character: "Narrator",
+                    delay: 3,
+                    audio: "wolf_growl",
+                    effect: "darken"
+                },
+                {
+                    text: "I can't run anymore... my leg...",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "pain"
+                },
+                {
+                    text: "Get up! Please, get up!",
+                    character: "You",
+                    delay: 2,
+                    audio: "terrified"
+                },
+                {
+                    text: "The wolves close in. Their breath is hot. Their eyes are hungry.",
+                    character: "Narrator",
+                    delay: 3,
+                    audio: "wolf_snarls"
+                },
+                {
+                    text: "I'm sorry... I'm so sorry...",
+                    character: "Alex",
+                    delay: 2,
+                    audio: "final"
+                },
+                {
+                    text: "NO!",
+                    character: "You",
+                    delay: 1,
+                    audio: "scream",
+                    effect: "shake"
+                },
+                {
+                    text: "The forest falls silent after the feast.\nOnly the wind remains to tell the tale.",
+                    character: "Narrator",
+                    delay: 4,
+                    effect: "blood",
+                    audio: "wind"
+                },
+                {
+                    text: "BAD ENDING: THE FEAST",
+                    character: "",
+                    delay: 3,
+                    effect: "title_red",
+                    special: true
+                },
+                {
+                    text: "The forest claimed new victims.\nSome are lost to the woods forever,\ntheir stories ending with howls in the night.",
+                    character: "",
+                    delay: 5,
+                    effect: "credits_red"
+                }
+            ],
+            cameraPath: [
+                { x: 0, y: 1.7, z: 5, lookAt: { x: 0, y: 1.7, z: 0 } },
+                { x: 0, y: 1.2, z: 3, lookAt: { x: 0, y: 1, z: 0 } },
+                { x: 0, y: 0.5, z: 2, lookAt: { x: 0, y: 0, z: 0 } }
+            ],
+            effects: [
+                { time: 0, type: "fade_in_red", duration: 2 },
+                { time: 35, type: "fade_out_red", duration: 5 }
+            ]
+        };
+    }
+    
+    createSecretEnding() {
+        return {
+            name: "Heartseed Tree",
+            duration: 60,
+            dialogues: [
+                {
+                    text: "What... what is this place?",
+                    character: "You",
+                    delay: 2,
+                    audio: "awe"
+                },
+                {
+                    text: "Before you stands the most magnificent tree you've ever seen. Its bark glows with a soft light.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "glow"
+                },
+                {
+                    text: "Welcome, child of the forest. I am the Heartseed.",
+                    character: "Heartseed Tree",
+                    delay: 2,
+                    audio: "ancient",
+                    effect: "pulse"
+                },
+                {
+                    text: "You... you can talk?",
+                    character: "You",
+                    delay: 2,
+                    audio: "astonished"
+                },
+                {
+                    text: "I am the memory of this forest. The keeper of its stories. You have wandered far from your path.",
+                    character: "Heartseed Tree",
+                    delay: 4,
+                    audio: "wise"
+                },
+                {
+                    text: "Can you show us the way out?",
+                    character: "You",
+                    delay: 2,
+                    audio: "hopeful"
+                },
+                {
+                    text: "There is a way out. But there is also a way in. The forest chooses those who listen.",
+                    character: "Heartseed Tree",
+                    delay: 4,
+                    audio: "mysterious"
+                },
+                {
+                    text: "Its voice isn't just in your ears. It's in the ground beneath your feet, the air you breathe.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "vibrate"
+                },
+                {
+                    text: "I hear it... I hear everything...",
+                    character: "You",
+                    delay: 2,
+                    audio: "transcendent"
+                },
+                {
+                    text: "Your friend calls your name, but the voice comes from far away. From another world.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "echo"
+                },
+                {
+                    text: "The bark feels like skin. The leaves whisper secrets only you can understand.",
+                    character: "Narrator",
+                    delay: 3,
+                    effect: "merge"
+                },
+                {
+                    text: "I remember... I remember being a seed. I remember every rain. Every sunrise.",
+                    character: "You",
+                    delay: 3,
+                    audio: "awakening"
+                },
+                {
+                    text: "Roots emerge from the ground, wrapping gently around your feet. They don't trap you. They welcome you.",
+                    character: "Narrator",
+                    delay: 4,
+                    effect: "roots"
+                },
+                {
+                    text: "Goodbye, Alex. Tell them... tell them I found what I was looking for.",
+                    character: "You",
+                    delay: 3,
+                    audio: "peaceful"
+                },
+                {
+                    text: "Your body becomes bark. Your thoughts become leaves. Your heartbeat becomes the forest's rhythm.",
+                    character: "Narrator",
+                    delay: 5,
+                    effect: "transform",
+                    audio: "heartbeat_slow"
+                },
+                {
+                    text: "SECRET ENDING: BECOMING",
+                    character: "",
+                    delay: 3,
+                    effect: "title_green",
+                    special: true
+                },
+                {
+                    text: "Some don't escape the forest.\nThey become part of it.\nA new guardian watches over the trees,\nlistening with human ears and wooden heart.",
+                    character: "",
+                    delay: 6,
+                    effect: "credits_green"
+                }
+            ],
+            cameraPath: [
+                { x: 0, y: 1.7, z: 10, lookAt: { x: 0, y: 5, z: 0 } },
+                { x: 5, y: 3, z: 8, lookAt: { x: 0, y: 5, z: 0 } },
+                { x: 0, y: 10, z: 15, lookAt: { x: 0, y: 0, z: 0 } },
+                { x: 0, y: 20, z: 30, lookAt: { x: 0, y: 0, z: 0 } }
+            ],
+            effects: [
+                { time: 0, type: "fade_in_green", duration: 3 },
+                { time: 55, type: "fade_out_green", duration: 5 }
+            ]
+        };
+    }
+    
+    play(cutsceneName, onComplete = null) {
+        if (!this.cutscenes[cutsceneName]) {
+            console.error(`Cutscene "${cutsceneName}" not found`);
+            if (onComplete) onComplete();
+            return;
+        }
+        
+        this.currentCutscene = this.cutscenes[cutsceneName];
+        this.cutsceneTime = 0;
+        this.dialogueIndex = 0;
+        this.isPlaying = true;
+        this.onComplete = onComplete;
+        
+        // Show cutscene UI
+        this.cutsceneUI.style.display = 'flex';
+        
+        // Pause game
+        GameState.isInCutscene = true;
+        GameState.isPaused = true;
+        
+        // Start cutscene
+        this.nextDialogue();
+        
+        // Start camera animation
+        this.startCameraAnimation();
+        
+        console.log(`Playing cutscene: ${this.currentCutscene.name}`);
+    }
+    
+    nextDialogue() {
+        if (!this.currentCutscene || this.dialogueIndex >= this.currentCutscene.dialogues.length) {
+            this.endCutscene();
+            return;
+        }
+        
+        const dialogue = this.currentCutscene.dialogues[this.dialogueIndex];
+        const textElement = document.getElementById('cutscene-text');
+        const characterElement = document.getElementById('cutscene-character');
+        
+        // Hide dialogue box first
+        const dialogueBox = document.getElementById('cutscene-dialogue');
+        dialogueBox.style.opacity = '0';
+        dialogueBox.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            // Update text
+            textElement.textContent = dialogue.text;
+            characterElement.textContent = dialogue.character;
+            
+            // Apply special formatting for titles
+            if (dialogue.special) {
+                textElement.style.fontSize = '2.5rem';
+                textElement.style.color = dialogue.effect === 'title_red' ? '#ff4444' : 
+                                         dialogue.effect === 'title_green' ? '#4CAF50' : '#ffffff';
+                textElement.style.textShadow = '0 0 20px currentColor';
+                characterElement.style.display = 'none';
+            } else {
+                textElement.style.fontSize = '1.8rem';
+                textElement.style.color = '#ffffff';
+                textElement.style.textShadow = 'none';
+                characterElement.style.display = 'block';
+            }
+            
+            // Show dialogue box with animation
+            setTimeout(() => {
+                dialogueBox.style.opacity = '1';
+                dialogueBox.style.transform = 'translateY(0)';
+            }, 50);
+            
+            // Play audio effect if specified
+            if (dialogue.audio) {
+                this.playAudioEffect(dialogue.audio);
+            }
+            
+            // Apply visual effect
+            if (dialogue.effect) {
+                this.applyVisualEffect(dialogue.effect);
+            }
+            
+            // Schedule next dialogue
+            this.dialogueIndex++;
+            setTimeout(() => this.nextDialogue(), dialogue.delay * 1000);
+            
+        }, 500);
+    }
+    
+    startCameraAnimation() {
+        if (!this.currentCutscene || !this.currentCutscene.cameraPath) return;
+        
+        const path = this.currentCutscene.cameraPath;
+        const totalTime = this.currentCutscene.duration;
+        const segmentTime = totalTime / path.length;
+        let currentSegment = 0;
+        
+        const animateCamera = () => {
+            if (!this.isPlaying || !GameState.camera) return;
+            
+            const progress = (this.cutsceneTime % segmentTime) / segmentTime;
+            const currentPoint = path[currentSegment];
+            const nextPoint = path[(currentSegment + 1) % path.length];
+            
+            // Interpolate position
+            GameState.camera.position.x = THREE.MathUtils.lerp(
+                currentPoint.x, 
+                nextPoint.x, 
+                progress
+            );
+            GameState.camera.position.y = THREE.MathUtils.lerp(
+                currentPoint.y, 
+                nextPoint.y, 
+                progress
+            );
+            GameState.camera.position.z = THREE.MathUtils.lerp(
+                currentPoint.z, 
+                nextPoint.z, 
+                progress
+            );
+            
+            // Look at target
+            const lookAt = new THREE.Vector3(
+                currentPoint.lookAt.x,
+                currentPoint.lookAt.y,
+                currentPoint.lookAt.z
+            );
+            GameState.camera.lookAt(lookAt);
+            
+            // Move to next segment
+            if (progress >= 0.99) {
+                currentSegment = (currentSegment + 1) % path.length;
+            }
+            
+            this.cutsceneTime += 0.016; // Assuming 60fps
+            requestAnimationFrame(animateCamera);
+        };
+        
+        animateCamera();
+    }
+    
+    applyVisualEffect(effectType) {
+        const container = this.cutsceneUI;
+        
+        switch(effectType) {
+            case 'fade':
+                container.style.animation = 'fadeEffect 2s';
+                break;
+            case 'darken':
+                container.style.backgroundColor = 'rgba(10, 10, 10, 0.95)';
+                break;
+            case 'brighten':
+                container.style.backgroundColor = 'rgba(30, 30, 20, 0.9)';
+                break;
+            case 'shake':
+                container.style.animation = 'shakeEffect 0.5s';
+                break;
+            case 'blood':
+                // Add blood overlay
+                const bloodOverlay = document.createElement('div');
+                bloodOverlay.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: radial-gradient(circle, transparent 30%, rgba(139, 0, 0, 0.7) 70%);
+                    z-index: 2;
+                    pointer-events: none;
+                `;
+                container.appendChild(bloodOverlay);
+                break;
+            case 'glow':
+                container.style.boxShadow = 'inset 0 0 100px rgba(76, 175, 80, 0.3)';
+                break;
+            case 'pulse':
+                container.style.animation = 'pulseEffect 2s infinite';
+                break;
+            case 'vibrate':
+                container.style.animation = 'vibrateEffect 3s';
+                break;
+            case 'merge':
+                // Add merging effect
+                const mergeEffect = document.createElement('div');
+                mergeEffect.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(45deg, transparent 40%, rgba(76, 175, 80, 0.2) 50%, transparent 60%);
+                    z-index: 2;
+                    pointer-events: none;
+                    animation: mergeAnimation 5s linear infinite;
+                `;
+                container.appendChild(mergeEffect);
+                break;
+            case 'roots':
+                // Add root pattern
+                const rootPattern = document.createElement('div');
+                rootPattern.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-image: radial-gradient(circle at 30% 70%, rgba(139, 69, 19, 0.1) 2px, transparent 2px);
+                    background-size: 50px 50px;
+                    z-index: 2;
+                    pointer-events: none;
+                    animation: rootGrow 10s linear;
+                `;
+                container.appendChild(rootPattern);
+                break;
+            case 'transform':
+                // Transformation effect
+                container.style.background = 'linear-gradient(45deg, #0a2f0a 0%, #1b5e20 50%, #0a2f0a 100%)';
+                container.style.animation = 'transformEffect 10s';
+                break;
+        }
+        
+        // Reset animation after it completes
+        setTimeout(() => {
+            container.style.animation = '';
+            container.style.boxShadow = '';
+            container.style.backgroundColor = '#000';
+        }, 3000);
+    }
+    
+    playAudioEffect(soundName) {
+        // In a real game, you would play actual audio files here
+        console.log(`Playing audio: ${soundName}`);
+        
+        // Simulate audio with console and visual feedback
+        switch(soundName) {
+            case 'wolf_howl':
+                // Would play wolf howl audio
+                break;
+            case 'wolf_growl':
+                // Would play wolf growl audio
+                break;
+            case 'scream':
+                // Would play scream audio
+                break;
+            case 'heartbeat_slow':
+                // Would play slow heartbeat
+                break;
+        }
+    }
+    
+    advanceDialogue() {
+        // Skip to next dialogue on click
+        this.nextDialogue();
+    }
+    
+    endCutscene() {
+        this.isPlaying = false;
+        this.currentCutscene = null;
+        
+        // Hide cutscene UI
+        this.cutsceneUI.style.display = 'none';
+        
+        // Clear any effects
+        this.cutsceneUI.style.background = '#000';
+        this.cutsceneUI.style.animation = '';
+        
+        // Remove any added effect elements
+        const effects = this.cutsceneUI.querySelectorAll('div[id^="effect-"], div[style*="position: absolute"]');
+        effects.forEach(effect => effect.remove());
+        
+        // Resume game
+        GameState.isInCutscene = false;
+        GameState.isPaused = false;
+        
+        // Call completion callback
+        if (this.onComplete) {
+            this.onComplete();
+        }
+        
+        console.log("Cutscene ended");
     }
     
     update(delta) {
-        if (!this.mesh || this.health <= 0) return;
+        if (!this.isPlaying) return;
         
-        const playerPos = GameState.player.position;
-        const distance = this.position.distanceTo(playerPos);
+        this.cutsceneTime += delta;
         
-        // Update AI state
-        this.updateState(distance);
-        
-        // Apply behavior based on state
-        switch(this.state) {
-            case 'idle':
-                this.idleBehavior(delta);
-                break;
-            case 'stalk':
-                this.stalkBehavior(playerPos, delta);
-                break;
-            case 'circle':
-                this.circleBehavior(playerPos, delta);
-                break;
-            case 'chase':
-                this.chaseBehavior(playerPos, delta);
-                break;
-            case 'retreat':
-                this.retreatBehavior(playerPos, delta);
-                break;
-        }
-        
-        // Update attack cooldown
-        if (this.attackCooldown > 0) {
-            this.attackCooldown -= delta;
-        }
-        
-        // Update visual position
-        this.mesh.position.copy(this.position);
-        this.mesh.rotation.copy(this.rotation);
-        
-        // Keep on ground
-        this.position.y = this.isBoss ? 0.75 : 0.5;
-    }
-    
-    updateState(distance) {
-        if (this.state === 'idle' && distance < this.stalkDistance) {
-            this.state = 'stalk';
-            if (!this.isBoss) {
-                GameState.ui.showNotification('A wolf is stalking you...');
-            }
-        }
-        
-        if (this.state === 'stalk' && distance < this.chaseDistance) {
-            this.state = 'circle';
-        }
-        
-        if (this.state === 'circle' && distance < this.attackDistance * 2) {
-            this.state = 'chase';
-        }
-        
-        if (this.state === 'chase' && distance > this.chaseDistance) {
-            this.state = 'stalk';
-        }
-        
-        // Fear-based retreat
-        if (GameState.player.fear > 80 && Math.random() < 0.01) {
-            this.state = 'retreat';
-        }
-    }
-    
-    idleBehavior(delta) {
-        // Random wandering
-        this.circleAngle += delta * 0.5;
-        this.position.x += Math.sin(this.circleAngle) * delta * 0.5;
-        this.position.z += Math.cos(this.circleAngle) * delta * 0.5;
-        
-        // Look in movement direction
-        const targetAngle = Math.atan2(
-            Math.sin(this.circleAngle),
-            Math.cos(this.circleAngle)
-        );
-        this.rotation.y = targetAngle;
-    }
-    
-    stalkBehavior(playerPos, delta) {
-        // Move toward player slowly
-        const direction = new THREE.Vector3()
-            .subVectors(playerPos, this.position)
-            .normalize();
-        
-        this.position.add(direction.multiplyScalar(this.speed * 0.3 * delta));
-        this.rotation.y = Math.atan2(direction.x, direction.z);
-    }
-    
-    circleBehavior(playerPos, delta) {
-        // Circle around player
-        this.circleAngle += delta * 1.5;
-        const radius = 8;
-        
-        const targetX = playerPos.x + Math.cos(this.circleAngle) * radius;
-        const targetZ = playerPos.z + Math.sin(this.circleAngle) * radius;
-        
-        const direction = new THREE.Vector3(
-            targetX - this.position.x,
-            0,
-            targetZ - this.position.z
-        ).normalize();
-        
-        this.position.add(direction.multiplyScalar(this.speed * 0.5 * delta));
-        this.rotation.y = Math.atan2(direction.x, direction.z);
-    }
-    
-    chaseBehavior(playerPos, delta) {
-        // Chase player directly
-        const direction = new THREE.Vector3()
-            .subVectors(playerPos, this.position)
-            .normalize();
-        
-        this.position.add(direction.multiplyScalar(this.speed * delta));
-        this.rotation.y = Math.atan2(direction.x, direction.z);
-        
-        // Check for attack
-        const distance = this.position.distanceTo(playerPos);
-        if (distance < this.attackDistance && this.attackCooldown <= 0) {
-            this.attack();
-        }
-    }
-    
-    retreatBehavior(playerPos, delta) {
-        // Move away from player
-        const direction = new THREE.Vector3()
-            .subVectors(this.position, playerPos)
-            .normalize();
-        
-        this.position.add(direction.multiplyScalar(this.speed * delta));
-        this.rotation.y = Math.atan2(direction.x, direction.z);
-        
-        // Return to idle after retreating
-        if (this.position.distanceTo(playerPos) > 50) {
-            this.state = 'idle';
-        }
-    }
-    
-    attack() {
-        GameState.player.health -= this.damage;
-        GameState.player.fear += this.isBoss ? 20 : 12;
-        this.attackCooldown = 2.0;
-        
-        // Show damage effect
-        GameState.ui.showDamageFlash();
-        GameState.ui.showNotification(
-            this.isBoss ? 'The boss wolf attacks!' : 'Wolf bites you!'
-        );
-        
-        // Play attack sound
-        if (GameState.audio.wolfAttack) {
-            GameState.audio.wolfAttack.play();
-        }
-    }
-    
-    takeDamage(amount) {
-        this.health -= amount;
-        if (this.health <= 0) {
-            this.die();
-        }
-    }
-    
-    die() {
-        // Remove from scene
-        if (this.mesh) {
-            GameState.scene.remove(this.mesh);
-            
-            // Create death effect
-            const particles = new THREE.Group();
-            for (let i = 0; i < 10; i++) {
-                const particle = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.1),
-                    new THREE.MeshBasicMaterial({ color: 0x222222 })
-                );
-                particle.position.copy(this.position);
-                particle.userData.velocity = new THREE.Vector3(
-                    (Math.random() - 0.5) * 2,
-                    Math.random() * 2,
-                    (Math.random() - 0.5) * 2
-                );
-                particles.add(particle);
-            }
-            GameState.scene.add(particles);
-            
-            // Remove particles after 1 second
-            setTimeout(() => {
-                GameState.scene.remove(particles);
-            }, 1000);
-        }
-        
-        // Remove from wolves array
-        GameState.wolves = GameState.wolves.filter(w => w.id !== this.id);
-        
-        // Update story if boss died
-        if (this.isBoss) {
-            GameState.story.bossDefeated = true;
-            GameState.ui.showNotification('BOSS DEFEATED!');
-        }
-    }
-}
-
-// ===============================
-// UI CONTROLLER
-// ===============================
-class UIController {
-    constructor() {
-        this.elements = {};
-        this.notificationQueue = [];
-        this.isNotificationShowing = false;
-        
-        this.init();
-    }
-    
-    init() {
-        this.cacheElements();
-        this.setupEventListeners();
-        this.updateAll();
-    }
-    
-    cacheElements() {
-        // Cache all UI elements for performance
-        this.elements = {
-            // Screens
-            loadingScreen: document.getElementById('loading-screen'),
-            mainMenu: document.getElementById('main-menu'),
-            howToPlay: document.getElementById('how-to-play'),
-            settings: document.getElementById('settings-menu'),
-            gameStart: document.getElementById('game-start'),
-            pauseMenu: document.getElementById('pause-menu'),
-            clickToPlay: document.getElementById('click-to-play'),
-            gameUI: document.getElementById('game-ui'),
-            
-            // Health
-            healthFill: document.getElementById('health-fill'),
-            healthValue: document.getElementById('health-value'),
-            
-            // Stamina
-            staminaFill: document.getElementById('stamina-fill'),
-            
-            // Battery
-            batteryIcon: document.getElementById('battery-icon'),
-            batteryValue: document.getElementById('battery-value'),
-            
-            // Fear
-            fearIcon: document.getElementById('fear-icon'),
-            fearFill: document.getElementById('fear-fill'),
-            
-            // Time
-            gameTime: document.getElementById('game-time'),
-            pauseTime: document.getElementById('pause-time'),
-            
-            // Objective
-            objectiveText: document.getElementById('objective-text'),
-            
-            // Interaction
-            interactionPrompt: document.getElementById('interaction-prompt'),
-            interactionText: document.getElementById('interaction-text'),
-            
-            // Notification
-            notification: document.getElementById('notification'),
-            notificationText: document.getElementById('notification-text'),
-            
-            // Pause menu
-            pauseHealth: document.getElementById('pause-health'),
-            pauseFear: document.getElementById('pause-fear'),
-            
-            // Settings
-            masterVolume: document.getElementById('master-volume'),
-            musicVolume: document.getElementById('music-volume'),
-            sfxVolume: document.getElementById('sfx-volume')
-        };
-    }
-    
-    setupEventListeners() {
-        // Main menu buttons
-        document.getElementById('new-game-btn').addEventListener('click', () => this.showScreen('gameStart'));
-        document.getElementById('how-to-play-btn').addEventListener('click', () => this.showScreen('howToPlay'));
-        document.getElementById('settings-btn').addEventListener('click', () => this.showScreen('settings'));
-        document.getElementById('quit-btn').addEventListener('click', () => this.quitGame());
-        
-        // Back buttons
-        document.getElementById('back-to-menu').addEventListener('click', () => this.showScreen('mainMenu'));
-        document.getElementById('back-to-menu2').addEventListener('click', () => this.showScreen('mainMenu'));
-        
-        // Settings
-        document.getElementById('apply-settings').addEventListener('click', () => this.applySettings());
-        
-        // Game start
-        document.getElementById('start-game-btn').addEventListener('click', () => this.startGame());
-        
-        // Pause menu
-        document.getElementById('resume-btn').addEventListener('click', () => this.resumeGame());
-        document.getElementById('settings-pause-btn').addEventListener('click', () => {
-            this.showScreen('settings');
-            this.elements.pauseMenu.style.display = 'none';
-        });
-        document.getElementById('menu-btn').addEventListener('click', () => this.quitToMenu());
-        
-        // Click to play screen
-        this.elements.clickToPlay.addEventListener('click', () => this.startGamePlay());
-        
-        // Volume sliders
-        if (this.elements.masterVolume) {
-            this.elements.masterVolume.addEventListener('input', (e) => {
-                this.updateVolumeDisplay('master-volume-value', e.target.value);
-            });
-        }
-        
-        if (this.elements.musicVolume) {
-            this.elements.musicVolume.addEventListener('input', (e) => {
-                this.updateVolumeDisplay('music-volume-value', e.target.value);
-            });
-        }
-        
-        if (this.elements.sfxVolume) {
-            this.elements.sfxVolume.addEventListener('input', (e) => {
-                this.updateVolumeDisplay('sfx-volume-value', e.target.value);
-            });
-        }
-        
-        // Field of view slider
-        const fovSlider = document.getElementById('fov');
-        if (fovSlider) {
-            fovSlider.addEventListener('input', (e) => {
-                document.getElementById('fov-value').textContent = `${e.target.value}°`;
-            });
-        }
-        
-        // Global ESC key for pause
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.elements.gameUI.style.display === 'block') {
-                this.togglePause();
-            }
-            
-            // Debug keys
-            if (e.key === 'F1' && e.ctrlKey) {
-                this.toggleDebug();
-            }
-        });
-    }
-    
-    showScreen(screenName) {
-        // Hide all screens
-        Object.values(this.elements).forEach(element => {
-            if (element && element.classList && element.classList.contains('screen')) {
-                element.style.display = 'none';
-            }
-        });
-        
-        // Show requested screen
-        if (this.elements[screenName]) {
-            this.elements[screenName].style.display = 'flex';
-        }
-    }
-    
-    startLoading() {
-        this.showScreen('loading');
-        
-        const progressBar = document.getElementById('progress-bar');
-        const progressText = document.getElementById('progress-text');
-        const loadingTip = document.getElementById('loading-tip');
-        
-        const loadingTips = [
-            "Generating forest terrain...",
-            "Loading wolf AI...",
-            "Setting up lighting system...",
-            "Initializing audio engine...",
-            "Preparing survival mechanics...",
-            "Loading story elements...",
-            "Finalizing game world..."
-        ];
-        
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 100) {
-                progress = 100;
-                clearInterval(interval);
-                setTimeout(() => this.loadingComplete(), 500);
-            }
-            
-            if (progressBar) progressBar.style.width = `${progress}%`;
-            if (progressText) progressText.textContent = `${Math.floor(progress)}%`;
-            
-            // Change tip every 20% progress
-            if (loadingTip && progress % 20 < 15 && progress % 20 > 10) {
-                const tipIndex = Math.floor(progress / 20);
-                if (tipIndex < loadingTips.length) {
-                    loadingTip.textContent = loadingTips[tipIndex];
+        // Check for timed effects
+        if (this.currentCutscene && this.currentCutscene.effects) {
+            this.currentCutscene.effects.forEach(effect => {
+                if (Math.abs(this.cutsceneTime - effect.time) < delta) {
+                    this.applyVisualEffect(effect.type);
                 }
-            }
-        }, 200);
-    }
-    
-    loadingComplete() {
-        this.showScreen('mainMenu');
-        this.playBackgroundMusic();
-    }
-    
-    playBackgroundMusic() {
-        // Background music initialization would go here
-        console.log("Background music system ready");
-    }
-    
-    startGame() {
-        this.showScreen('clickToPlay');
-    }
-    
-    startGamePlay() {
-        this.showScreen('gameUI');
-        this.elements.clickToPlay.style.display = 'none';
-        
-        // Initialize the game
-        Game.init();
-    }
-    
-    updateAll() {
-        this.updateHealth();
-        this.updateStamina();
-        this.updateBattery();
-        this.updateFear();
-        this.updateTime();
-    }
-    
-    updateHealth() {
-        const health = GameState.player.health;
-        const maxHealth = CONFIG.PLAYER.MAX_HEALTH;
-        const percentage = (health / maxHealth) * 100;
-        
-        if (this.elements.healthFill) {
-            this.elements.healthFill.style.width = `${percentage}%`;
-        }
-        
-        if (this.elements.healthValue) {
-            this.elements.healthValue.textContent = Math.round(health);
-        }
-        
-        if (this.elements.pauseHealth) {
-            this.elements.pauseHealth.textContent = Math.round(health);
-        }
-        
-        // Change color based on health
-        if (this.elements.healthFill) {
-            if (health > 70) {
-                this.elements.healthFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
-            } else if (health > 40) {
-                this.elements.healthFill.style.background = 'linear-gradient(90deg, #ff9800, #ffb74d)';
-            } else if (health > 20) {
-                this.elements.healthFill.style.background = 'linear-gradient(90deg, #f44336, #ef5350)';
-            } else {
-                this.elements.healthFill.style.background = 'linear-gradient(90deg, #d32f2f, #f44336)';
-                // Pulse effect for critical health
-                this.elements.healthFill.style.animation = 'pulse 0.5s infinite';
-            }
-        }
-    }
-    
-    updateStamina() {
-        const stamina = GameState.player.stamina;
-        const maxStamina = CONFIG.PLAYER.MAX_STAMINA;
-        const percentage = (stamina / maxStamina) * 100;
-        
-        if (this.elements.staminaFill) {
-            this.elements.staminaFill.style.width = `${percentage}%`;
-            
-            // Change color based on stamina
-            if (stamina > 50) {
-                this.elements.staminaFill.style.background = 'linear-gradient(90deg, #ffaa00, #ffcc44)';
-            } else if (stamina > 20) {
-                this.elements.staminaFill.style.background = 'linear-gradient(90deg, #ff9800, #ffb74d)';
-            } else {
-                this.elements.staminaFill.style.background = 'linear-gradient(90deg, #f57c00, #ff9800)';
-            }
-        }
-    }
-    
-    updateBattery() {
-        const battery = GameState.player.battery;
-        
-        if (this.elements.batteryValue) {
-            this.elements.batteryValue.textContent = `${Math.round(battery)}%`;
-        }
-        
-        if (this.elements.batteryIcon) {
-            if (battery > 70) {
-                this.elements.batteryIcon.className = 'fas fa-battery-full';
-                this.elements.batteryIcon.style.color = '#4CAF50';
-            } else if (battery > 40) {
-                this.elements.batteryIcon.className = 'fas fa-battery-three-quarters';
-                this.elements.batteryIcon.style.color = '#ff9800';
-            } else if (battery > 20) {
-                this.elements.batteryIcon.className = 'fas fa-battery-half';
-                this.elements.batteryIcon.style.color = '#ff9800';
-            } else if (battery > 10) {
-                this.elements.batteryIcon.className = 'fas fa-battery-quarter';
-                this.elements.batteryIcon.style.color = '#f44336';
-            } else {
-                this.elements.batteryIcon.className = 'fas fa-battery-empty';
-                this.elements.batteryIcon.style.color = '#d32f2f';
-            }
-        }
-    }
-    
-    updateFear() {
-        const fear = GameState.player.fear;
-        const maxFear = CONFIG.PLAYER.MAX_FEAR;
-        const percentage = (fear / maxFear) * 100;
-        
-        if (this.elements.fearFill) {
-            this.elements.fearFill.style.width = `${percentage}%`;
-        }
-        
-        if (this.elements.pauseFear) {
-            this.elements.pauseFear.textContent = Math.round(fear);
-        }
-        
-        if (this.elements.fearIcon) {
-            // Change icon color based on fear
-            if (fear > 80) {
-                this.elements.fearIcon.style.color = '#d32f2f';
-                this.elements.fearIcon.className = 'fas fa-skull-crossbones';
-                this.elements.fearFill.style.background = 'linear-gradient(90deg, #d32f2f, #f44336)';
-            } else if (fear > 60) {
-                this.elements.fearIcon.style.color = '#f44336';
-                this.elements.fearIcon.className = 'fas fa-skull';
-                this.elements.fearFill.style.background = 'linear-gradient(90deg, #f44336, #ef5350)';
-            } else if (fear > 40) {
-                this.elements.fearIcon.style.color = '#aa44ff';
-                this.elements.fearIcon.className = 'fas fa-ghost';
-                this.elements.fearFill.style.background = 'linear-gradient(90deg, #aa44ff, #e040fb)';
-            } else {
-                this.elements.fearIcon.style.color = '#aa44ff';
-                this.elements.fearIcon.className = 'fas fa-skull';
-                this.elements.fearFill.style.background = 'linear-gradient(90deg, #aa44ff, #ff44ff)';
-            }
-        }
-    }
-    
-    updateTime() {
-        const gameMinutes = Math.floor(GameState.gameTime / 60);
-        const gameSeconds = Math.floor(GameState.gameTime % 60);
-        
-        // Format time as HH:MM
-        const hours = Math.floor(gameMinutes / 60);
-        const minutes = gameMinutes % 60;
-        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        
-        if (this.elements.gameTime) {
-            this.elements.gameTime.textContent = timeString;
-        }
-        
-        if (this.elements.pauseTime) {
-            this.elements.pauseTime.textContent = `${gameMinutes}:${gameSeconds.toString().padStart(2, '0')}`;
-        }
-    }
-    
-    updateObjective(text) {
-        if (this.elements.objectiveText) {
-            this.elements.objectiveText.textContent = text;
-        }
-    }
-    
-    showNotification(text, duration = 3000) {
-        if (!this.elements.notification || !this.elements.notificationText) return;
-        
-        this.elements.notificationText.textContent = text;
-        this.elements.notification.classList.add('show');
-        
-        // Remove after duration
-        setTimeout(() => {
-            this.elements.notification.classList.remove('show');
-        }, duration);
-        
-        // Log to console for debugging
-        console.log(`Notification: ${text}`);
-    }
-    
-    showDamageFlash() {
-        const flash = document.getElementById('damage-flash');
-        if (!flash) return;
-        
-        flash.style.background = 'rgba(255, 0, 0, 0.3)';
-        setTimeout(() => {
-            flash.style.background = 'rgba(255, 0, 0, 0)';
-        }, 300);
-    }
-    
-    showInteractionPrompt(text) {
-        if (!this.elements.interactionPrompt || !this.elements.interactionText) return;
-        
-        this.elements.interactionText.textContent = text;
-        this.elements.interactionPrompt.classList.add('show');
-    }
-    
-    hideInteractionPrompt() {
-        if (!this.elements.interactionPrompt) return;
-        this.elements.interactionPrompt.classList.remove('show');
-    }
-    
-    togglePause() {
-        if (GameState.isPaused) {
-            this.resumeGame();
-        } else {
-            this.pauseGame();
-        }
-    }
-    
-    pauseGame() {
-        GameState.isPaused = true;
-        this.showScreen('pauseMenu');
-        this.updateAll();
-    }
-    
-    resumeGame() {
-        GameState.isPaused = false;
-        this.showScreen('gameUI');
-    }
-    
-    quitToMenu() {
-        if (confirm("Are you sure you want to quit to main menu? Progress will be lost.")) {
-            this.showScreen('mainMenu');
-            Game.reset();
-        }
-    }
-    
-    applySettings() {
-        const settings = {
-            quality: document.getElementById('quality').value,
-            masterVolume: document.getElementById('master-volume').value,
-            musicVolume: document.getElementById('music-volume').value,
-            sfxVolume: document.getElementById('sfx-volume').value,
-            difficulty: document.getElementById('difficulty').value,
-            fov: document.getElementById('fov').value
-        };
-        
-        // Apply FOV to camera
-        if (GameState.camera) {
-            GameState.camera.fov = parseInt(settings.fov);
-            GameState.camera.updateProjectionMatrix();
-        }
-        
-        // Save settings to localStorage
-        localStorage.setItem('ears_of_forest_settings', JSON.stringify(settings));
-        
-        this.showScreen('mainMenu');
-        this.showNotification('Settings saved!');
-    }
-    
-    updateVolumeDisplay(elementId, value) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = `${value}%`;
-        }
-    }
-    
-    toggleDebug() {
-        // Toggle debug mode
-        const debugInfo = document.getElementById('debug-info');
-        if (!debugInfo) {
-            this.createDebugInfo();
-        } else {
-            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-        }
-    }
-    
-    createDebugInfo() {
-        const debugDiv = document.createElement('div');
-        debugDiv.id = 'debug-info';
-        debugDiv.style.cssText = `
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: #0f0;
-            font-family: monospace;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 10000;
-            pointer-events: none;
-        `;
-        document.body.appendChild(debugDiv);
-        
-        // Update debug info every frame
-        setInterval(() => {
-            if (debugDiv.style.display !== 'none') {
-                debugDiv.innerHTML = `
-                    FPS: ${Math.round(1/GameState.clock.getDelta())}<br>
-                    Pos: ${GameState.player.position.x.toFixed(1)}, ${GameState.player.position.y.toFixed(1)}, ${GameState.player.position.z.toFixed(1)}<br>
-                    Health: ${GameState.player.health.toFixed(0)}<br>
-                    Fear: ${GameState.player.fear.toFixed(0)}<br>
-                    Wolves: ${GameState.wolves.length}<br>
-                    Time: ${GameState.gameTime.toFixed(0)}s
-                `;
-            }
-        }, 100);
-    }
-    
-    quitGame() {
-        if (confirm("Are you sure you want to quit the game?")) {
-            // Close window or navigate away
-            window.close();
+            });
         }
     }
 }
 
 // ===============================
-// GAME ENGINE
+// UPDATED GAME ENGINE WITH CUTSCENES
 // ===============================
 class GameEngine {
     constructor() {
         this.ui = new UIController();
+        this.cutscene = new CutsceneSystem();
         this.lastUpdateTime = 0;
         this.frameCount = 0;
         this.fps = 60;
     }
     
     init() {
+        // Start with opening cutscene
+        this.cutscene.play('opening', () => {
+            // After cutscene, initialize the game
+            this.initializeGame();
+        });
+    }
+    
+    initializeGame() {
         // Initialize Three.js
         this.initThreeJS();
         
@@ -947,104 +870,183 @@ class GameEngine {
         
         // Show initial objective
         this.ui.updateObjective("Find your way out of the forest");
-        this.ui.showNotification("You wake up in the forest... Watch for wolves.");
+        this.ui.showNotification("You're lost in the forest... Find Alex and escape!");
     }
     
-    initThreeJS() {
-        // Scene
-        GameState.scene = new THREE.Scene();
-        GameState.scene.fog = new THREE.Fog(0xcccccc, 20, 150);
-        
-        // Camera
-        GameState.camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-        GameState.camera.position.set(0, 1.7, 5);
-        
-        // Renderer
-        GameState.renderer = new THREE.WebGLRenderer({ antialias: true });
-        GameState.renderer.setSize(window.innerWidth, window.innerHeight);
-        GameState.renderer.setPixelRatio(window.devicePixelRatio);
-        GameState.renderer.shadowMap.enabled = true;
-        GameState.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(GameState.renderer.domElement);
-        
-        // Clock
-        GameState.clock = new THREE.Clock();
-        
-        // Controls
-        GameState.controls = new THREE.PointerLockControls(GameState.camera, document.body);
-        GameState.scene.add(GameState.controls.getObject());
-        
-        // Pointer lock events
-        GameState.controls.addEventListener('lock', () => {
-            console.log("Pointer locked - game controls active");
-        });
-        
-        GameState.controls.addEventListener('unlock', () => {
-            console.log("Pointer unlocked");
-        });
-        
-        // Click to lock
-        document.addEventListener('click', () => {
-            if (!GameState.controls.isLocked && !GameState.isPaused) {
-                GameState.controls.lock();
-            }
-        });
-    }
+    // ... [rest of the GameEngine class remains the same as before, 
+    // but with added ending triggers]
     
-    setupWorld() {
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-        GameState.scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        directionalLight.position.set(100, 200, 100);
-        directionalLight.castShadow = true;
-        GameState.scene.add(directionalLight);
-        
-        // Ground
-        const groundGeometry = new THREE.PlaneGeometry(500, 500, 64, 64);
-        const groundMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4f6b4f,
-            roughness: 0.9
-        });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -1;
-        ground.receiveShadow = true;
-        GameState.scene.add(ground);
-        
-        // Add terrain variation
-        const vertices = groundGeometry.attributes.position;
-        for (let i = 0; i < vertices.count; i++) {
-            const x = vertices.getX(i);
-            const z = vertices.getZ(i);
-            const height = Math.sin(x * 0.05) * 1.5 + Math.cos(z * 0.05) * 1.5;
-            vertices.setY(i, height);
+    checkEndings() {
+        // Check for bad ending (player death)
+        if (GameState.player.health <= 0) {
+            this.triggerBadEnding();
+            return;
         }
-        groundGeometry.computeVertexNormals();
         
-        // Add trees
-        this.generateTrees(50);
+        // Check for good ending (escape with Alex)
+        const escapePoint = new THREE.Vector3(200, 0, 200); // Example escape point
+        const distanceToEscape = GameState.player.position.distanceTo(escapePoint);
         
-        // Add rocks
-        this.generateRocks(30);
+        if (distanceToEscape < 20 && GameState.story.helpedClassmate) {
+            this.triggerGoodEnding();
+            return;
+        }
         
-        // Create cave
-        this.createCave();
+        // Check for secret ending (find Heartseed Tree)
+        const heartseedLocation = new THREE.Vector3(150, 0, 150); // Example location
+        const distanceToHeartseed = GameState.player.position.distanceTo(heartseedLocation);
+        
+        if (distanceToHeartseed < 15 && GameState.player.fear > 70) {
+            this.triggerSecretEnding();
+            return;
+        }
     }
     
-    generateTrees(count) {
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1f, roughness: 1 });
-        const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f5f2f, roughness: 0.9 });
+    triggerGoodEnding() {
+        GameState.isGameOver = true;
+        this.cutscene.play('goodEnding', () => {
+            this.showEndScreen("good");
+        });
+    }
+    
+    triggerBadEnding() {
+        GameState.isGameOver = true;
+        this.cutscene.play('badEnding', () => {
+            this.showEndScreen("bad");
+        });
+    }
+    
+    triggerSecretEnding() {
+        GameState.isGameOver = true;
+        this.cutscene.play('secretEnding', () => {
+            this.showEndScreen("secret");
+        });
+    }
+    
+    showEndScreen(endingType) {
+        const endScreen = document.createElement('div');
+        endScreen.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 20000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: 'Cinzel', serif;
+        `;
         
-        for (let i = 0; i < count; i++) {
-            const x = (Math.random() - 0.5) * 400;
-            const z = (Math.random() - 0.5) * 400;
-            
-            // Avoid spawn area
-            if (Math.abs
+        let title = "";
+        let color = "";
+        let message = "";
+        
+        switch(endingType) {
+            case "good":
+                title = "GOOD ENDING - SAFE RETURN";
+                color = "#4CAF50";
+                message = "You and Alex escaped the forest. The nightmare is over, but you'll never forget what you heard in the darkness.";
+                break;
+            case "bad":
+                title = "BAD ENDING - THE FEAST";
+                color = "#f44336";
+                message = "The forest claimed new victims. Some stories end not with a conclusion, but with silence.";
+                break;
+            case "secret":
+                title = "SECRET ENDING - BECOMING";
+                color = "#8BC34A";
+                message = "You didn't escape the forest. You became part of it. A new guardian watches over the trees.";
+                break;
+        }
+        
+        endScreen.innerHTML = `
+            <h1 style="font-size: 3rem; margin-bottom: 2rem; color: ${color}; text-shadow: 0 0 20px ${color}">
+                ${title}
+            </h1>
+            <p style="font-size: 1.5rem; max-width: 600px; text-align: center; margin-bottom: 3rem; line-height: 1.6">
+                ${message}
+            </p>
+            <div style="margin-bottom: 2rem; font-size: 1.2rem; color: #888">
+                Time Survived: ${Math.floor(GameState.gameTime / 60)}:${Math.floor(GameState.gameTime % 60).toString().padStart(2, '0')}<br>
+                Wolves Encountered: ${GameState.wolves.length}<br>
+                Fear Level: ${Math.round(GameState.player.fear)}%
+            </div>
+            <div style="display: flex; gap: 20px;">
+                <button id="restart-btn" style="
+                    background: ${color};
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    font-size: 1.2rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: inherit;
+                ">
+                    Play Again
+                </button>
+                <button id="menu-btn" style="
+                    background: #333;
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    font-size: 1.2rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: inherit;
+                ">
+                    Main Menu
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(endScreen);
+        
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            location.reload();
+        });
+        
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            endScreen.remove();
+            this.ui.showScreen('mainMenu');
+            Game.reset();
+        });
+    }
+    
+    // ... [rest of the GameEngine methods remain the same]
+}
+
+// ===============================
+// ADD CSS ANIMATIONS FOR CUTSCENES
+// ===============================
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeEffect {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    @keyframes shakeEffect {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    
+    @keyframes pulseEffect {
+        0%, 100% { box-shadow: inset 0 0 50px rgba(76, 175, 80, 0.3); }
+        50% { box-shadow: inset 0 0 100px rgba(76, 175, 80, 0.6); }
+    }
+    
+    @keyframes vibrateEffect {
+        0%, 100% { transform: translate(0, 0); }
+        10% { transform: translate(-1px, -1px); }
+        20% {
