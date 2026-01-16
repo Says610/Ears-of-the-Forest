@@ -236,3 +236,98 @@ document.body.addEventListener(
   },
   { once: true }
 );
+// ======================================================
+// Part 3/10 – Player Movement System
+// ======================================================
+
+// ------------------- Player State -------------------
+const player = {
+  speed: 3.5,
+  sprintMultiplier: 1.8,
+  velocity: new THREE.Vector3(),
+  bobTime: 0
+};
+
+const movement = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  sprint: false
+};
+
+// ------------------- Input -------------------
+document.addEventListener("keydown", (e) => {
+  switch (e.code) {
+    case "KeyW": movement.forward = true; break;
+    case "KeyS": movement.backward = true; break;
+    case "KeyA": movement.left = true; break;
+    case "KeyD": movement.right = true; break;
+    case "ShiftLeft": movement.sprint = true; break;
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  switch (e.code) {
+    case "KeyW": movement.forward = false; break;
+    case "KeyS": movement.backward = false; break;
+    case "KeyA": movement.left = false; break;
+    case "KeyD": movement.right = false; break;
+    case "ShiftLeft": movement.sprint = false; break;
+  }
+});
+
+// ------------------- Movement Update -------------------
+function updatePlayerMovement(delta) {
+  if (cutsceneActive || dialogueActive) return;
+  if (!controls.isLocked) return;
+
+  player.velocity.set(0, 0, 0);
+
+  const speed =
+    player.speed *
+    (movement.sprint ? player.sprintMultiplier : 1);
+
+  if (movement.forward) player.velocity.z -= speed;
+  if (movement.backward) player.velocity.z += speed;
+  if (movement.left) player.velocity.x -= speed;
+  if (movement.right) player.velocity.x += speed;
+
+  controls.moveRight(player.velocity.x * delta);
+  controls.moveForward(player.velocity.z * delta);
+
+  // Head bob
+  const moving =
+    movement.forward ||
+    movement.backward ||
+    movement.left ||
+    movement.right;
+
+  if (moving) {
+    player.bobTime += delta * 8;
+    camera.position.y =
+      1.7 + Math.sin(player.bobTime) * 0.04;
+  } else {
+    camera.position.y = THREE.MathUtils.lerp(
+      camera.position.y,
+      1.7,
+      delta * 10
+    );
+  }
+}
+
+// ------------------- Hook Into Main Loop -------------------
+const previousAnimate = animatePart1;
+animatePart1 = function () {
+  requestAnimationFrame(animatePart1);
+  const delta = clock.getDelta();
+
+  if (introCutscene.active) {
+    updateIntroCutscene(delta);
+  } else {
+    updatePlayerMovement(delta);
+  }
+
+  renderer.render(scene, camera);
+};
+
