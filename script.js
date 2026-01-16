@@ -1040,19 +1040,26 @@ class EarsOfTheForest {
         }
     }
     
-    skipCutscene() {
-        if (this.currentCutscene) {
-            const cutsceneElement = document.getElementById(`cutscene-${this.currentCutscene}`);
-            if (cutsceneElement) {
-                cutsceneElement.style.display = 'none';
-            }
-            this.currentCutscene = null;
-            this.isInCutscene = false;
-            
-            // Request pointer lock after skipping
-            const canvas = document.getElementById('gameCanvas');
-            if (canvas && !this.isPaused) {
-                canvas.requestPointerLock();
+    showCutscene(type) {
+    this.isInCutscene = true;
+    this.currentCutscene = type;
+    
+    const cutsceneElement = document.getElementById(`cutscene-${type}`);
+    if (cutsceneElement) {
+        cutsceneElement.style.display = 'flex';
+        
+        // Create visual effects
+        this.createCutsceneEffects(`cutscene-${type}`);
+        
+        // Auto-advance after delay for start cutscene
+        if (type === 'start') {
+            setTimeout(() => {
+                this.skipCutscene();
+                this.startGame();
+            }, 7000);
+        }
+    }
+}
             }
         }
     }
@@ -1166,3 +1173,56 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('progress-bar').style.width = '100%';
     }
 });
+
+// Add this method to the EarsOfTheForest class:
+createCutsceneEffects(cutsceneId) {
+    const cutscene = document.getElementById(cutsceneId);
+    if (!cutscene) return;
+    
+    // Create particles container
+    const particles = document.createElement('div');
+    particles.className = 'cutscene-particles';
+    cutscene.appendChild(particles);
+    
+    // Create particles based on cutscene type
+    let particleCount = 30;
+    let particleColor = 'rgba(255, 255, 255, 0.5)';
+    
+    if (cutsceneId.includes('start')) {
+        particleCount = 50;
+        particleColor = 'rgba(76, 175, 80, 0.3)';
+        // Add floating leaves
+        for (let i = 0; i < 10; i++) {
+            const leaf = document.createElement('div');
+            leaf.className = 'floating-leaf';
+            leaf.style.cssText = `
+                --start-x: ${Math.random() * 100}vw;
+                --end-x: ${(Math.random() * 100) - 50}vw;
+                left: ${Math.random() * 100}%;
+                animation-delay: ${Math.random() * 5}s;
+            `;
+            particles.appendChild(leaf);
+        }
+    }
+    else if (cutsceneId.includes('bad')) {
+        particleCount = 40;
+        particleColor = 'rgba(255, 68, 68, 0.3)';
+    }
+    else if (cutsceneId.includes('secret')) {
+        particleCount = 60;
+        particleColor = 'rgba(139, 195, 74, 0.4)';
+    }
+    
+    // Create particles
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.cssText = `
+            background: ${particleColor};
+            left: ${Math.random() * 100}%;
+            animation-delay: ${Math.random() * 10}s;
+            --tx: ${(Math.random() * 200) - 100}px;
+        `;
+        particles.appendChild(particle);
+    }
+}
