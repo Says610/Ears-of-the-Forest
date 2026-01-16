@@ -1,29 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ears of the Forest</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ears of the Forest</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+    
+    <!-- PointerLockControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
 
-<!-- Pointer Lock Overlay (hidden since we removed "click to lock") -->
-<div id="blocker"></div>
-<div id="instructions"></div>
+    <!-- Pointer Lock Overlay (shown when game starts) -->
+    <div id="blocker">
+        <div id="instructions">
+            <h1 style="font-size: 48px; margin-bottom: 20px;">EARS OF THE FOREST</h1>
+            <p style="font-size: 24px; margin-bottom: 30px;">Click to play</p>
+            <p>Move: WASD | Jump: SPACE | Sprint: SHIFT</p>
+            <p>Flashlight: F | Medkit: H | Battery: B | Craft: C</p>
+            <p style="margin-top: 30px; color: #ff6666;">Survive the wolves. Find your way out.</p>
+        </div>
+    </div>
 
-<!-- HUD Elements are dynamically created by script.js -->
-<div id="choiceContainer"></div>
+    <!-- Dialogue Box -->
+    <div id="dialogue" style="display: none;"></div>
 
-<!-- Include Three.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-
-<!-- Include PointerLockControls -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/PointerLockControls.js"></script>
-
-<!-- Include AudioLoader (built into Three.js) -->
-
-<!-- Main Game Script -->
-<script src="script.js"></script>
+    <!-- Main Game Script -->
+    <script src="script.js"></script>
 </body>
 </html>
