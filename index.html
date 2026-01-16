@@ -5,30 +5,355 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ears of the Forest</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
     
     <!-- PointerLockControls -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/controls/PointerLockControls.js"></script>
+    
+    <!-- Howler.js for audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 </head>
 <body>
-
-    <!-- Pointer Lock Overlay (shown when game starts) -->
-    <div id="blocker">
-        <div id="instructions">
-            <h1 style="font-size: 48px; margin-bottom: 20px;">EARS OF THE FOREST</h1>
-            <p style="font-size: 24px; margin-bottom: 30px;">Click to play</p>
-            <p>Move: WASD | Jump: SPACE | Sprint: SHIFT</p>
-            <p>Flashlight: F | Medkit: H | Battery: B | Craft: C</p>
-            <p style="margin-top: 30px; color: #ff6666;">Survive the wolves. Find your way out.</p>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <div class="loading-content">
+            <div class="loader"></div>
+            <h1>Loading Ears of the Forest...</h1>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progress-bar"></div>
+                <span class="progress-text" id="progress-text">0%</span>
+            </div>
+            <p class="loading-tip" id="loading-tip">Initializing game engine...</p>
         </div>
     </div>
 
-    <!-- Dialogue Box -->
-    <div id="dialogue" style="display: none;"></div>
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen" style="display: none;">
+        <div class="menu-content">
+            <h1 class="game-title"><i class="fas fa-tree"></i> EARS OF THE FOREST</h1>
+            <div class="menu-background">
+                <div class="forest-preview"></div>
+            </div>
+            <div class="menu-options">
+                <button class="menu-btn" id="new-game-btn">
+                    <i class="fas fa-play"></i> New Game
+                </button>
+                <button class="menu-btn" id="continue-btn" disabled>
+                    <i class="fas fa-play-circle"></i> Continue
+                </button>
+                <button class="menu-btn" id="settings-btn">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+                <button class="menu-btn" id="how-to-play-btn">
+                    <i class="fas fa-question-circle"></i> How to Play
+                </button>
+                <button class="menu-btn quit-btn" id="quit-btn">
+                    <i class="fas fa-power-off"></i> Quit
+                </button>
+            </div>
+            <div class="version">v1.0.0 | Survival Horror</div>
+        </div>
+    </div>
 
-    <!-- Main Game Script -->
+    <!-- How to Play Screen -->
+    <div id="how-to-play" class="screen" style="display: none;">
+        <div class="menu-content">
+            <h2><i class="fas fa-graduation-cap"></i> How to Play</h2>
+            <div class="tutorial-content">
+                <div class="tutorial-section">
+                    <h3><i class="fas fa-walking"></i> Movement</h3>
+                    <p>• <strong>WASD</strong> - Move around the forest</p>
+                    <p>• <strong>SPACE</strong> - Jump over obstacles</p>
+                    <p>• <strong>SHIFT</strong> - Sprint (drains stamina)</p>
+                    <p>• <strong>MOUSE</strong> - Look around</p>
+                </div>
+                
+                <div class="tutorial-section">
+                    <h3><i class="fas fa-tools"></i> Equipment</h3>
+                    <p>• <strong>F</strong> - Toggle flashlight (battery drains)</p>
+                    <p>• <strong>H</strong> - Use medkit to heal</p>
+                    <p>• <strong>B</strong> - Replace flashlight battery</p>
+                    <p>• <strong>ESC</strong> - Pause game / Open menu</p>
+                </div>
+                
+                <div class="tutorial-section">
+                    <h3><i class="fas fa-skull-crossbones"></i> Survival Tips</h3>
+                    <p>• Listen for wolf howls - they hunt in packs</p>
+                    <p>• Stay in light to reduce fear</p>
+                    <p>• Avoid caves unless necessary</p>
+                    <p>• Collect resources to craft items</p>
+                    <p>• Watch your stamina - running out leaves you vulnerable</p>
+                </div>
+                
+                <div class="tutorial-section warning">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Dangers</h3>
+                    <p>• Wolves will stalk, circle, then attack</p>
+                    <p>• Darkness increases fear (affects sanity)</p>
+                    <p>• The cave holds a powerful boss wolf</p>
+                    <p>• Time passes - events trigger at 3, 5, and 10 minutes</p>
+                </div>
+            </div>
+            <button class="menu-btn back-btn" id="back-to-menu">
+                <i class="fas fa-arrow-left"></i> Back to Menu
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-menu" class="screen" style="display: none;">
+        <div class="menu-content">
+            <h2><i class="fas fa-sliders-h"></i> Game Settings</h2>
+            
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="graphics">Graphics</button>
+                <button class="settings-tab" data-tab="audio">Audio</button>
+                <button class="settings-tab" data-tab="gameplay">Gameplay</button>
+            </div>
+            
+            <div class="settings-content">
+                <!-- Graphics Tab -->
+                <div class="settings-tab-content active" id="graphics-tab">
+                    <div class="setting">
+                        <label for="quality">Quality Preset</label>
+                        <select id="quality">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="ultra">Ultra</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting">
+                        <label for="resolution">Resolution</label>
+                        <select id="resolution">
+                            <option value="720p">1280x720</option>
+                            <option value="900p" selected>1600x900</option>
+                            <option value="1080p">1920x1080</option>
+                            <option value="native">Native</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting">
+                        <label for="shadows">Shadows</label>
+                        <select id="shadows">
+                            <option value="off">Off</option>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting">
+                        <label for="fov">Field of View</label>
+                        <input type="range" id="fov" min="60" max="110" value="75">
+                        <span id="fov-value">75°</span>
+                    </div>
+                </div>
+                
+                <!-- Audio Tab -->
+                <div class="settings-tab-content" id="audio-tab">
+                    <div class="setting">
+                        <label for="master-volume">Master Volume</label>
+                        <input type="range" id="master-volume" min="0" max="100" value="80">
+                        <span id="master-volume-value">80%</span>
+                    </div>
+                    
+                    <div class="setting">
+                        <label for="music-volume">Music Volume</label>
+                        <input type="range" id="music-volume" min="0" max="100" value="70">
+                        <span id="music-volume-value">70%</span>
+                    </div>
+                    
+                    <div class="setting">
+                        <label for="sfx-volume">SFX Volume</label>
+                        <input type="range" id="sfx-volume" min="0" max="100" value="90">
+                        <span id="sfx-volume-value">90%</span>
+                    </div>
+                    
+                    <div class="setting">
+                        <label for="ambient-volume">Ambient Volume</label>
+                        <input type="range" id="ambient-volume" min="0" max="100" value="85">
+                        <span id="ambient-volume-value">85%</span>
+                    </div>
+                </div>
+                
+                <!-- Gameplay Tab -->
+                <div class="settings-tab-content" id="gameplay-tab">
+                    <div class="setting">
+                        <label for="difficulty">Difficulty</label>
+                        <select id="difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hard</option>
+                            <option value="nightmare">Nightmare</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting">
+                        <label>
+                            <input type="checkbox" id="subtitles" checked> Enable Subtitles
+                        </label>
+                    </div>
+                    
+                    <div class="setting">
+                        <label>
+                            <input type="checkbox" id="tutorial-hints"> Tutorial Hints
+                        </label>
+                    </div>
+                    
+                    <div class="setting">
+                        <label>
+                            <input type="checkbox" id="head-bob"> Head Bobbing
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-buttons">
+                <button class="menu-btn" id="apply-settings">
+                    <i class="fas fa-check"></i> Apply
+                </button>
+                <button class="menu-btn" id="back-to-menu2">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Start Screen -->
+    <div id="game-start" class="screen" style="display: none;">
+        <div class="menu-content">
+            <h2>Ready to Begin Your Journey?</h2>
+            <div class="start-instructions">
+                <p><i class="fas fa-mouse-pointer"></i> Click anywhere to lock mouse and start playing</p>
+                <p><i class="fas fa-volume-up"></i> Use headphones for the best experience</p>
+                <p><i class="fas fa-lightbulb"></i> Pay attention to sounds - wolves can be heard before seen</p>
+                <p><i class="fas fa-heartbeat"></i> Watch your fear level - too high causes hallucinations</p>
+            </div>
+            <button class="menu-btn start-game-btn" id="start-game-btn">
+                <i class="fas fa-play"></i> Start Adventure
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="screen" style="display: none;">
+        <div class="menu-content">
+            <h2><i class="fas fa-pause"></i> Game Paused</h2>
+            <div class="pause-stats">
+                <div class="stat">
+                    <span class="stat-label">Time Survived:</span>
+                    <span class="stat-value" id="pause-time">0:00</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Health:</span>
+                    <span class="stat-value" id="pause-health">100</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Fear:</span>
+                    <span class="stat-value" id="pause-fear">5</span>
+                </div>
+            </div>
+            <div class="menu-options">
+                <button class="menu-btn" id="resume-btn">
+                    <i class="fas fa-play"></i> Resume Game
+                </button>
+                <button class="menu-btn" id="settings-pause-btn">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+                <button class="menu-btn" id="menu-btn">
+                    <i class="fas fa-home"></i> Main Menu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game UI -->
+    <div id="game-ui" style="display: none;">
+        <!-- Health -->
+        <div class="ui-health">
+            <i class="fas fa-heart"></i>
+            <div class="health-bar">
+                <div class="health-fill" id="health-fill"></div>
+                <span class="health-value" id="health-value">100</span>
+            </div>
+        </div>
+        
+        <!-- Stamina -->
+        <div class="ui-stamina">
+            <i class="fas fa-bolt"></i>
+            <div class="stamina-bar">
+                <div class="stamina-fill" id="stamina-fill"></div>
+            </div>
+        </div>
+        
+        <!-- Battery -->
+        <div class="ui-battery">
+            <i class="fas fa-battery-full" id="battery-icon"></i>
+            <span class="battery-value" id="battery-value">100%</span>
+        </div>
+        
+        <!-- Fear -->
+        <div class="ui-fear">
+            <i class="fas fa-skull" id="fear-icon"></i>
+            <div class="fear-bar">
+                <div class="fear-fill" id="fear-fill"></div>
+            </div>
+        </div>
+        
+        <!-- Time -->
+        <div class="ui-time">
+            <i class="fas fa-clock"></i>
+            <span id="game-time">12:00 PM</span>
+        </div>
+        
+        <!-- Interaction Prompt -->
+        <div class="interaction-prompt" id="interaction-prompt">
+            <i class="fas fa-hand-point-up"></i>
+            <span id="interaction-text">Press E to interact</span>
+        </div>
+        
+        <!-- Objective -->
+        <div class="objective">
+            <span class="objective-label">Objective:</span>
+            <span class="objective-text" id="objective-text">Find your way out of the forest</span>
+        </div>
+        
+        <!-- Notification -->
+        <div class="notification" id="notification">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="notification-text"></span>
+        </div>
+        
+        <!-- Crosshair -->
+        <div class="crosshair">
+            <div class="crosshair-dot"></div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container" style="display: none;"></div>
+
+    <!-- Click to Play Overlay -->
+    <div id="click-to-play" class="screen" style="display: none;">
+        <div class="click-content">
+            <h1>EARS OF THE FOREST</h1>
+            <p class="click-instruction">
+                <i class="fas fa-mouse-pointer"></i> Click anywhere to play
+            </p>
+            <div class="game-info">
+                <p><i class="fas fa-wolf"></i> Watch for wolves</p>
+                <p><i class="fas fa-ear-listen"></i> Listen carefully</p>
+                <p><i class="fas fa-map-signs"></i> Find your way out</p>
+                <p><i class="fas fa-lightbulb"></i> Use your flashlight wisely</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script -->
     <script src="script.js"></script>
 </body>
 </html>
