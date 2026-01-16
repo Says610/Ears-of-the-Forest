@@ -1,5 +1,5 @@
 /* =========================================================
-   EARS OF THE FOREST - SURVIVAL HORROR STYLES
+   EARS OF THE FOREST - STYLES
 ========================================================= */
 
 /* Reset & Base */
@@ -542,47 +542,6 @@ html, body {
 @keyframes messageAppear {
     from { opacity: 0; transform: translateX(20px); }
     to { opacity: 1; transform: translateX(0); }
-}
-
-/* Dialogue Choices */
-.dialogue-choices {
-    position: absolute;
-    bottom: 150px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    padding: 20px;
-    border-radius: 10px;
-    border: 2px solid #4CAF50;
-    min-width: 300px;
-    z-index: 102;
-    backdrop-filter: blur(10px);
-    display: none;
-    pointer-events: all;
-}
-
-.dialogue-question {
-    color: #8BC34A;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-    text-align: center;
-}
-
-.dialogue-option {
-    background: rgba(76, 175, 80, 0.2);
-    color: white;
-    border: 1px solid #4CAF50;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 5px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-}
-
-.dialogue-option:hover {
-    background: rgba(76, 175, 80, 0.4);
-    transform: scale(1.02);
 }
 
 /* Pause Menu */
