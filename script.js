@@ -1060,3 +1060,4 @@ window.addEventListener('DOMContentLoaded', () => {
     animate();
     console.log("Game started! Click to begin.");
 });
+
