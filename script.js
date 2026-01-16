@@ -1,135 +1,53 @@
-/* =========================================================
-   EARS OF THE FOREST
-   PART 1 / 20
-   CORE SETUP (VISIBLE, DAYTIME, NOT GRAY)
-========================================================= */
-
-// ===============================
-// BASIC VARIABLES
-// ===============================
-let scene, camera, renderer, clock;
-let player = { health: 100 };
-
-// ===============================
-// SCENE
-// ===============================
+// ============================
+// SCENE, CAMERA, RENDERER
+// ============================
 scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB); // sky blue
+scene.fog = new THREE.Fog(0xc0c0c0, 20, 150); // light gray fog
 
-// DAYTIME SKY COLOR (NOT DARK, NOT GRAY)
-scene.background = new THREE.Color(0x9bb0b5);
+camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0,1.6,5);
 
-// LIGHT GRAY TRANSLUCENT FOG (DAYTIME)
-scene.fog = new THREE.Fog(
-  0x9bb0b5, // fog color
-  25,       // near
-  200       // far
-);
-
-// ===============================
-// CAMERA
-// ===============================
-camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-
-// CAMERA HEIGHT = HUMAN EYES
-camera.position.set(0, 1.7, 5);
-camera.lookAt(0, 1.7, 0);
-
-// ===============================
-// RENDERER
-// ===============================
-renderer = new THREE.WebGLRenderer({
-  antialias: true
-});
-
+renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-
-// ENABLE SHADOWS
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-// ATTACH CANVAS
 document.body.appendChild(renderer.domElement);
 
-// ===============================
-// CLOCK
-// ===============================
-clock = new THREE.Clock();
+// ============================
+// LIGHTS
+// ============================
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+hemiLight.position.set(0,50,0);
+scene.add(hemiLight);
 
-// ===============================
-// LIGHTING (DAYTIME FOREST)
-// ===============================
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(30,50,30);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+scene.add(dirLight);
 
-// SUN LIGHT
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-sunLight.position.set(100, 200, 100);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-scene.add(sunLight);
-
-// SOFT SKY LIGHT
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
-scene.add(ambientLight);
-
-// ===============================
-// GROUND (VISIBLE & REALISTIC)
-// ===============================
-const groundGeometry = new THREE.PlaneGeometry(
-  500,
-  500,
-  64,
-  64
-);
-
-const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4f6b4f,   // forest green
-  roughness: 1
-});
-
-const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-ground.rotation.x = -Math.PI / 2;
+// ============================
+// GROUND
+// ============================
+const groundGeo = new THREE.PlaneGeometry(200,200);
+const groundMat = new THREE.MeshStandardMaterial({color:0x228B22}); // forest green
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// ===============================
-// DEBUG OBJECT (MUST SEE THIS)
-// ===============================
-const debugCube = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshStandardMaterial({ color: 0xff0000 })
+// ============================
+// OBSTACLES (example)
+// ============================
+const box = new THREE.Mesh(
+  new THREE.BoxGeometry(2,1,2),
+  new THREE.MeshStandardMaterial({color:0x8B4513}) // brown log
 );
-debugCube.position.set(0, 1, -5);
-debugCube.castShadow = true;
-scene.add(debugCube);
-
-// ===============================
-// BASIC RENDER LOOP (TEMP)
-// ===============================
-function animate() {
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
-}
-animate();
-
-// ===============================
-// RESIZE FIX
-// ===============================
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// ===============================
-// CONFIRM LOAD
-// ===============================
-console.log("PART 1 LOADED: Scene visible, daytime, ground rendered");
+box.position.set(5,0.5,0);
+box.castShadow = true;
+scene.add(box);
 
 /* =========================================================
    PART 2 / 20
@@ -2211,3 +2129,4 @@ function showDialogue(messages) {
 // FINAL DEBUG CONFIRM
 console.log("PART 20 LOADED: Inventory usage, crafting, keybindings ready");
 console.log("5000-LINE SCRIPT STRUCTURE COMPLETE (20 PARTS)");
+
