@@ -39,40 +39,19 @@ html, body {
 
 .loader-container {
     position: relative;
-    width: 120px;
-    height: 120px;
-    margin-bottom: 30px;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
 }
 
 .loader {
     width: 100%;
     height: 100%;
-    border: 4px solid rgba(76, 175, 80, 0.1);
-    border-top: 4px solid #4CAF50;
-    border-right: 4px solid #4CAF50;
+    border: 3px solid rgba(76, 175, 80, 0.1);
+    border-top: 3px solid #4CAF50;
     border-radius: 50%;
-    animation: spin 2s linear infinite;
+    animation: spin 1s linear infinite;
     position: absolute;
-}
-
-.loader-2 {
-    border: 4px solid transparent;
-    border-top: 4px solid #8BC34A;
-    border-left: 4px solid #8BC34A;
-    animation: spin 3s linear infinite reverse;
-    opacity: 0.7;
-}
-
-.loader-3 {
-    border: 4px solid transparent;
-    border-bottom: 4px solid #FF5722;
-    border-right: 4px solid #FF5722;
-    animation: spin 1.5s linear infinite;
-    opacity: 0.5;
-    width: 80px;
-    height: 80px;
-    top: 20px;
-    left: 20px;
 }
 
 @keyframes spin {
@@ -84,55 +63,43 @@ html, body {
     color: #4CAF50;
     margin-bottom: 10px;
     text-shadow: 0 0 20px #4CAF50;
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: bold;
-    letter-spacing: 4px;
+    letter-spacing: 2px;
 }
 
 .game-subtitle {
     color: #8BC34A;
     margin-bottom: 20px;
-    font-size: 1.1rem;
-    letter-spacing: 2px;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
 }
 
 .loading-progress {
-    width: 400px;
-    height: 6px;
+    width: 300px;
+    height: 4px;
     background: rgba(0, 30, 0, 0.8);
-    border-radius: 3px;
-    margin: 30px 0;
+    border-radius: 2px;
+    margin: 20px 0;
     overflow: hidden;
     border: 1px solid rgba(76, 175, 80, 0.3);
-    box-shadow: 0 0 20px rgba(76, 175, 80, 0.2);
 }
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #4CAF50, #8BC34A, #FF5722);
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
     width: 0%;
-    transition: width 0.5s ease;
-    box-shadow: 0 0 10px #4CAF50;
+    transition: width 0.3s ease;
 }
 
 .loading-text {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #8BC34A;
-    margin-top: 20px;
+    margin-top: 10px;
     text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
     text-align: center;
     max-width: 500px;
     line-height: 1.6;
-}
-
-.tip {
-    position: absolute;
-    bottom: 40px;
-    color: #666;
-    font-size: 0.9rem;
-    font-style: italic;
-    text-align: center;
-    max-width: 500px;
 }
 
 /* Game Canvas */
@@ -252,37 +219,15 @@ html, body {
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.8);
-    padding: 12px 24px;
+    padding: 10px 20px;
     border-radius: 10px;
     border: 1px solid rgba(76, 175, 80, 0.5);
     color: #8BC34A;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-align: center;
     backdrop-filter: blur(10px);
     opacity: 0.8;
     transition: opacity 0.3s;
-}
-
-/* Skip Cutscene */
-#skip-cutscene {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.7);
-    color: #888;
-    padding: 10px 20px;
-    border-radius: 5px;
-    border: 1px solid #444;
-    cursor: pointer;
-    pointer-events: all;
-    z-index: 10001;
-    display: none;
-    font-family: 'Courier New', monospace;
-}
-
-#skip-cutscene:hover {
-    background: rgba(0, 0, 0, 0.9);
-    color: #ccc;
 }
 
 /* Audio Toggle */
@@ -292,18 +237,18 @@ html, body {
     right: 20px;
     background: rgba(0, 0, 0, 0.7);
     color: white;
-    padding: 10px;
+    padding: 8px;
     border-radius: 50%;
     border: 1px solid #444;
     cursor: pointer;
     pointer-events: all;
     z-index: 101;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 #audio-toggle:hover {
@@ -316,18 +261,18 @@ html, body {
     top: 20px;
     left: 20px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 4px solid #ff4444;
-    min-width: 200px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #ff4444;
+    min-width: 180px;
     backdrop-filter: blur(10px);
 }
 
 .health-bar {
-    width: 180px;
-    height: 20px;
+    width: 160px;
+    height: 16px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     margin-top: 5px;
 }
@@ -341,21 +286,21 @@ html, body {
 
 .stamina-container {
     position: absolute;
-    top: 90px;
+    top: 80px;
     left: 20px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 4px solid #ffaa00;
-    min-width: 200px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #ffaa00;
+    min-width: 180px;
     backdrop-filter: blur(10px);
 }
 
 .stamina-bar {
-    width: 180px;
-    height: 10px;
+    width: 160px;
+    height: 8px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
     margin-top: 5px;
 }
@@ -369,21 +314,21 @@ html, body {
 
 .fear-container {
     position: absolute;
-    top: 160px;
+    top: 140px;
     left: 20px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 4px solid #aa44ff;
-    min-width: 200px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #aa44ff;
+    min-width: 180px;
     backdrop-filter: blur(10px);
 }
 
 .fear-bar {
-    width: 180px;
-    height: 10px;
+    width: 160px;
+    height: 8px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
     margin-top: 5px;
 }
@@ -400,23 +345,23 @@ html, body {
     top: 20px;
     right: 20px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 4px solid #44aaff;
-    min-width: 200px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #44aaff;
+    min-width: 180px;
     backdrop-filter: blur(10px);
     text-align: right;
 }
 
 .time-container {
     position: absolute;
-    top: 90px;
+    top: 80px;
     right: 20px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 4px solid #4CAF50;
-    min-width: 200px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #4CAF50;
+    min-width: 180px;
     backdrop-filter: blur(10px);
     text-align: right;
 }
@@ -426,19 +371,20 @@ html, body {
     bottom: 20px;
     left: 20px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border-left: 4px solid #ffaa44;
-    min-width: 200px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #ffaa44;
+    min-width: 180px;
     backdrop-filter: blur(10px);
 }
 
 .inventory-item {
     display: flex;
     justify-content: space-between;
-    margin: 8px 0;
-    padding: 5px 0;
+    margin: 5px 0;
+    padding: 3px 0;
     border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.9rem;
 }
 
 .objective-container {
@@ -447,10 +393,10 @@ html, body {
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.8);
-    padding: 15px 25px;
-    border-radius: 10px;
+    padding: 10px 20px;
+    border-radius: 8px;
     border: 1px solid rgba(76,175,80,0.5);
-    max-width: 500px;
+    max-width: 400px;
     backdrop-filter: blur(10px);
     text-align: center;
 }
@@ -476,110 +422,6 @@ html, body {
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
-.crosshair-line {
-    position: absolute;
-    background: rgba(255, 255, 255, 0.7);
-}
-
-.crosshair-line.horizontal {
-    width: 15px;
-    height: 2px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.crosshair-line.vertical {
-    width: 2px;
-    height: 15px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-/* Cutscene Styles */
-.cutscene-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    z-index: 1000;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-family: 'Courier New', monospace;
-    padding: 40px;
-}
-
-.cutscene-text {
-    font-size: 1.8rem;
-    line-height: 1.6;
-    text-align: center;
-    max-width: 800px;
-    margin-bottom: 30px;
-    opacity: 0;
-    transform: translateY(20px);
-    animation: textAppear 1s ease forwards;
-}
-
-@keyframes textAppear {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.cutscene-character {
-    font-size: 1.3rem;
-    color: #4CAF50;
-    margin-top: 20px;
-    font-style: italic;
-    opacity: 0;
-    animation: textAppear 1s ease 0.5s forwards;
-}
-
-.cutscene-continue {
-    font-size: 1rem;
-    color: #888;
-    margin-top: 40px;
-    letter-spacing: 2px;
-    animation: pulse 2s infinite;
-    opacity: 0;
-    animation: pulse 2s infinite 1s forwards;
-}
-
-.cinematic-bars {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.cinematic-bar {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    background: rgba(0,0,0,0.8);
-}
-
-.cinematic-bar.top {
-    top: 0;
-    height: 100px;
-    background: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
-}
-
-.cinematic-bar.bottom {
-    bottom: 0;
-    height: 100px;
-    background: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
-}
-
 /* Pause Menu */
 .pause-menu {
     position: fixed;
@@ -598,9 +440,9 @@ html, body {
 }
 
 .pause-title {
-    font-size: 4rem;
+    font-size: 3rem;
     color: #4CAF50;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     text-shadow: 0 0 20px #4CAF50;
 }
 
@@ -608,14 +450,14 @@ html, body {
     background: #4CAF50;
     color: white;
     border: none;
-    padding: 15px 30px;
-    font-size: 1.2rem;
-    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 6px;
     cursor: pointer;
-    margin: 10px;
+    margin: 8px;
     font-family: inherit;
     transition: all 0.3s;
-    min-width: 200px;
+    min-width: 180px;
     text-align: center;
 }
 
@@ -648,13 +490,13 @@ html, body {
     align-items: center;
     color: white;
     font-family: 'Courier New', monospace;
-    padding: 40px;
+    padding: 30px;
     text-align: center;
 }
 
 .end-title {
-    font-size: 4rem;
-    margin-bottom: 30px;
+    font-size: 3rem;
+    margin-bottom: 20px;
     text-shadow: 0 0 30px currentColor;
     animation: titleGlow 2s infinite alternate;
 }
@@ -665,31 +507,31 @@ html, body {
 }
 
 .end-message {
-    font-size: 1.5rem;
-    margin-bottom: 40px;
-    max-width: 600px;
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    max-width: 500px;
     line-height: 1.6;
     color: #ccc;
 }
 
 .end-stats {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #888;
-    margin-bottom: 50px;
+    margin-bottom: 40px;
 }
 
 .end-button {
     background: #4CAF50;
     color: white;
     border: none;
-    padding: 15px 30px;
-    font-size: 1.2rem;
-    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 6px;
     cursor: pointer;
-    margin: 10px;
+    margin: 8px;
     font-family: inherit;
     transition: all 0.3s;
-    min-width: 200px;
+    min-width: 180px;
 }
 
 .end-button:hover {
@@ -705,53 +547,6 @@ html, body {
     background: #444;
 }
 
-/* Dialogue System */
-.dialogue-container {
-    position: absolute;
-    bottom: 150px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    padding: 20px 30px;
-    border-radius: 15px;
-    border: 2px solid #4CAF50;
-    max-width: 600px;
-    min-width: 400px;
-    backdrop-filter: blur(20px);
-    display: none;
-}
-
-.dialogue-text {
-    font-size: 1.2rem;
-    line-height: 1.5;
-    margin-bottom: 20px;
-    color: #eee;
-}
-
-.dialogue-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.dialogue-option {
-    background: rgba(76, 175, 80, 0.2);
-    border: 1px solid #4CAF50;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
-    font-size: 1rem;
-    transition: all 0.2s;
-}
-
-.dialogue-option:hover {
-    background: rgba(76, 175, 80, 0.4);
-    transform: translateX(5px);
-}
-
 /* Notifications */
 .notification {
     position: absolute;
@@ -759,15 +554,15 @@ html, body {
     left: 50%;
     transform: translate(-50%, -50%);
     background: rgba(0, 0, 0, 0.95);
-    padding: 20px 40px;
-    border-radius: 15px;
+    padding: 15px 30px;
+    border-radius: 10px;
     border: 2px solid #4CAF50;
     text-align: center;
     opacity: 0;
     transition: opacity 0.3s, transform 0.3s;
     pointer-events: none;
     backdrop-filter: blur(20px);
-    max-width: 500px;
+    max-width: 400px;
     z-index: 101;
 }
 
@@ -777,49 +572,9 @@ html, body {
 }
 
 .notification-text {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #eee;
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-
-/* Breathing Animation */
-.breathing {
-    animation: breathing 4s ease-in-out infinite;
-}
-
-@keyframes breathing {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .game-title {
-        font-size: 2rem;
-    }
-    
-    .loading-progress {
-        width: 300px;
-    }
-    
-    .health-container,
-    .stamina-container,
-    .fear-container,
-    .battery-container,
-    .time-container,
-    .inventory-container {
-        min-width: 150px;
-        padding: 10px;
-    }
-    
-    .cutscene-text {
-        font-size: 1.4rem;
-    }
-    
-    .dialogue-container {
-        min-width: 300px;
-        max-width: 90%;
-    }
 }
 
 /* Utility */
@@ -838,4 +593,39 @@ html, body {
 @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .game-title {
+        font-size: 1.5rem;
+    }
+    
+    .loading-progress {
+        width: 250px;
+    }
+    
+    .health-container,
+    .stamina-container,
+    .fear-container,
+    .battery-container,
+    .time-container,
+    .inventory-container {
+        min-width: 140px;
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+    
+    .health-bar, .stamina-bar, .fear-bar {
+        width: 120px;
+    }
+    
+    .storyboard-text {
+        font-size: 1.2rem;
+    }
+    
+    .storyboard-image {
+        width: 90%;
+        height: 300px;
+    }
 }
