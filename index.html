@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ears of the Forest</title>
     <style>
-        /* Critical loading styles */
+        /* Reset */
         * {
             margin: 0;
             padding: 0;
@@ -14,32 +14,11 @@
         
         body {
             overflow: hidden;
-            font-family: 'Arial', sans-serif;
             background: #000;
-            color: white;
+            font-family: Arial, sans-serif;
         }
         
-        #game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            display: none;
-        }
-        
-        #game-ui {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-        }
-        
-        /* Loading screen - shown first */
+        /* Loading Screen */
         #loading-screen {
             position: fixed;
             top: 0;
@@ -48,10 +27,11 @@
             height: 100%;
             background: #000;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            color: white;
             z-index: 10000;
-            flex-direction: column;
         }
         
         .loader {
@@ -68,6 +48,28 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Game Container */
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: none;
+        }
+        
+        /* Game UI */
+        #game-ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
     </style>
     
     <!-- Three.js -->
@@ -78,13 +80,13 @@
     <div id="loading-screen">
         <div class="loader"></div>
         <h1 style="color: #4CAF50; margin-bottom: 10px;">Ears of the Forest</h1>
-        <p style="color: #888;">Loading...</p>
+        <p style="color: #888;">Loading game...</p>
     </div>
 
-    <!-- Game Container (Three.js canvas goes here) -->
+    <!-- Game Container -->
     <div id="game-container"></div>
 
-    <!-- Game UI (created by JavaScript) -->
+    <!-- Game UI -->
     <div id="game-ui"></div>
 
     <!-- Game Script -->
