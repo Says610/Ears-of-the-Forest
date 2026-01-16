@@ -706,3 +706,340 @@ html, body {
         padding: 15px;
     }
 }
+
+/* =========================================================
+   CUTSCENE VISUALS - ADD TO YOUR EXISTING STYLE.CSS
+========================================================= */
+
+/* Cutscene Container */
+.cutscene {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    padding: 40px;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+}
+
+/* Cutscene Background Effects */
+.cutscene::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(76, 175, 80, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(139, 195, 74, 0.1) 0%, transparent 50%),
+        linear-gradient(45deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 26, 10, 0.9) 100%);
+    animation: cutsceneBgPulse 10s infinite alternate;
+}
+
+@keyframes cutsceneBgPulse {
+    0% { opacity: 0.7; }
+    100% { opacity: 0.9; }
+}
+
+/* Cutscene Title */
+.cutscene-title {
+    font-size: 4rem;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    text-shadow: 
+        0 0 10px currentColor,
+        0 0 20px currentColor,
+        0 0 40px currentColor;
+    animation: titleGlow 3s infinite alternate, titleFloat 4s infinite ease-in-out;
+    position: relative;
+    z-index: 2;
+}
+
+/* Different colors for different cutscenes */
+#cutscene-start .cutscene-title { color: #4CAF50; }
+#cutscene-good .cutscene-title { color: #4CAF50; }
+#cutscene-bad .cutscene-title { color: #f44336; }
+#cutscene-secret .cutscene-title { color: #8BC34A; }
+
+@keyframes titleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Cutscene Text */
+.cutscene-text {
+    font-size: 1.8rem;
+    max-width: 800px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    opacity: 0;
+    animation: textAppear 2s ease-out 1s forwards;
+    position: relative;
+    z-index: 2;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    border-left: 3px solid currentColor;
+}
+
+@keyframes textAppear {
+    from { 
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Cutscene Subtext */
+.cutscene-subtext {
+    font-size: 1.3rem;
+    color: #8BC34A;
+    max-width: 600px;
+    opacity: 0;
+    animation: subtextAppear 2s ease-out 3s forwards;
+    position: relative;
+    z-index: 2;
+    font-style: italic;
+    border-top: 1px solid rgba(139, 195, 74, 0.3);
+    padding-top: 15px;
+}
+
+@keyframes subtextAppear {
+    to { opacity: 0.9; }
+}
+
+/* Cutscene Skip Button */
+.cutscene-skip {
+    position: absolute;
+    bottom: 40px;
+    color: #888;
+    font-size: 0.9rem;
+    opacity: 0;
+    animation: skipAppear 1s ease-out 4s forwards;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #444;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.cutscene-skip:hover {
+    color: #fff;
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.2);
+}
+
+@keyframes skipAppear {
+    to { opacity: 0.7; }
+}
+
+/* Particle Effects for Cutscenes */
+.cutscene-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    animation: particleFloat 10s infinite linear;
+}
+
+@keyframes particleFloat {
+    0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100px) translateX(var(--tx, 0));
+        opacity: 0;
+    }
+}
+
+/* Specific Visuals for Each Cutscene */
+
+/* START CUTSCENE - Forest vibes */
+#cutscene-start {
+    background: linear-gradient(0deg, #000 0%, #001a00 100%);
+}
+
+#cutscene-start::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.1) 2px, transparent 3px),
+        radial-gradient(circle at 50% 50%, rgba(139, 195, 74, 0.1) 2px, transparent 3px),
+        radial-gradient(circle at 80% 80%, rgba(76, 175, 80, 0.1) 2px, transparent 3px);
+    background-size: 100px 100px;
+    animation: forestPattern 20s infinite linear;
+}
+
+@keyframes forestPattern {
+    0% { background-position: 0 0; }
+    100% { background-position: 100px 100px; }
+}
+
+/* GOOD ENDING - Celebration vibes */
+#cutscene-good {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+#cutscene-good::after {
+    content: '✨';
+    position: absolute;
+    font-size: 2rem;
+    animation: sparkle 3s infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* BAD ENDING - Horror vibes */
+#cutscene-bad {
+    background: linear-gradient(0deg, #000 0%, #330000 100%);
+}
+
+#cutscene-bad::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 30% 40%, rgba(255, 0, 0, 0.1) 0%, transparent 70%),
+        radial-gradient(circle at 70% 60%, rgba(255, 68, 68, 0.1) 0%, transparent 70%);
+    animation: bloodPulse 2s infinite alternate;
+}
+
+@keyframes bloodPulse {
+    0% { opacity: 0.3; }
+    100% { opacity: 0.7; }
+}
+
+/* SECRET ENDING - Mystical vibes */
+#cutscene-secret {
+    background: linear-gradient(45deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%);
+}
+
+#cutscene-secret::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at center, rgba(139, 195, 74, 0.2) 0%, transparent 70%);
+    animation: mysticalGlow 5s infinite alternate;
+}
+
+@keyframes mysticalGlow {
+    0% { 
+        opacity: 0.2;
+        filter: blur(20px);
+    }
+    100% { 
+        opacity: 0.4;
+        filter: blur(10px);
+    }
+}
+
+/* Floating leaves for forest cutscenes */
+.floating-leaf {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: rgba(76, 175, 80, 0.3);
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    animation: leafFloat 15s infinite linear;
+}
+
+@keyframes leafFloat {
+    0% {
+        transform: translateY(-10px) translateX(var(--start-x)) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) translateX(var(--end-x)) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Responsive cutscenes */
+@media (max-width: 768px) {
+    .cutscene-title {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+    }
+    
+    .cutscene-text {
+        font-size: 1.2rem;
+        padding: 15px;
+        margin: 0 20px 20px;
+    }
+    
+    .cutscene-subtext {
+        font-size: 1rem;
+        padding: 10px 20px;
+    }
+    
+    .cutscene {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .cutscene-title {
+        font-size: 2rem;
+        letter-spacing: 3px;
+    }
+    
+    .cutscene-text {
+        font-size: 1rem;
+    }
+    
+    .cutscene-subtext {
+        font-size: 0.9rem;
+    }
+}
