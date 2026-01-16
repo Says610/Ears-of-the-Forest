@@ -4,211 +4,173 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ears of the Forest</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        /* Reset */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            background: #000;
-            font-family: 'Arial', sans-serif;
-            cursor: none;
-        }
-        
-        /* Loading Screen */
-        #loading-screen {
+        /* Additional styles for visual cutscenes */
+        .storyboard-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background: #000;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .storyboard-scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 1s ease;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            padding: 40px;
+        }
+        
+        .storyboard-scene.active {
+            opacity: 1;
+        }
+        
+        .storyboard-image {
+            width: 600px;
+            height: 400px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border: 2px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .storyboard-text {
+            max-width: 800px;
+            font-size: 1.8rem;
+            text-align: center;
             color: white;
-            z-index: 10000;
-        }
-        
-        .loader {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(76, 175, 80, 0.3);
-            border-top: 4px solid #4CAF50;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            line-height: 1.6;
             margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
         }
         
-        .loading-progress {
-            width: 300px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            margin: 20px 0;
-            overflow: hidden;
+        .storyboard-character {
+            font-size: 1.4rem;
+            color: #4CAF50;
+            font-style: italic;
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+            margin-top: 10px;
         }
         
-        .progress-bar {
-            height: 100%;
-            background: #4CAF50;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Game Container */
-        #game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            display: none;
-        }
-        
-        /* Game UI */
-        #game-ui {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-        }
-        
-        /* Cinematic Bars */
-        .cinematic-bar {
+        .storyboard-continue {
             position: absolute;
-            left: 0;
-            width: 100%;
-            height: 100px;
-            background: rgba(0,0,0,0.8);
-            z-index: 1;
+            bottom: 40px;
+            color: #888;
+            font-size: 1rem;
+            animation: pulse 2s infinite;
+            cursor: pointer;
         }
         
-        .cinematic-bar.top {
-            top: 0;
-            background: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
-        }
-        
-        .cinematic-bar.bottom {
-            bottom: 0;
-            background: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
-        }
-        
-        /* Fade Effects */
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-        
-        /* Damage Flash */
-        .damage-flash {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255,0,0,0.3);
-            pointer-events: none;
-            z-index: 99;
-            opacity: 0;
-        }
-        
-        /* Fear Effects */
-        .fear-effect {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(170,68,255,0.1) 100%);
-            pointer-events: none;
-            z-index: 98;
-            opacity: 0;
-            filter: blur(2px);
-        }
-        
-        /* Instructions */
-        #instructions {
+        .storyboard-progress {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 10px;
-            color: white;
-            text-align: center;
-            border: 1px solid #4CAF50;
-            opacity: 0.8;
+            width: 300px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
         }
         
-        #instructions p {
-            margin: 5px 0;
-            font-size: 0.9rem;
+        .storyboard-progress-bar {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        /* Skip button */
+        #skip-cutscene-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: #888;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            cursor: pointer;
+            z-index: 1001;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        
+        #skip-cutscene-btn:hover {
+            background: rgba(0,0,0,0.9);
             color: #ccc;
         }
     </style>
-    
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-    <!-- Howler.js for Audio -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
-    <!-- Simple Perlin Noise for Procedural Content -->
-    <script src="https://cdn.jsdelivr.net/npm/perlin-noise@0.0.1/dist/perlin-noise.umd.min.js"></script>
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen">
-        <div class="loader"></div>
-        <h1 style="color: #4CAF50; margin-bottom: 10px; text-shadow: 0 0 10px #4CAF50;">Ears of the Forest</h1>
-        <p style="color: #888; margin-bottom: 20px;">Loading immersive audio experience...</p>
+        <div class="loader-container">
+            <div class="loader"></div>
+        </div>
+        <h1 class="game-title">EARS OF THE FOREST</h1>
+        <p class="game-subtitle">A Survival Horror Experience</p>
+        
         <div class="loading-progress">
             <div class="progress-bar" id="progress-bar"></div>
         </div>
-        <p id="loading-text" style="color: #aaa; margin-top: 20px; font-size: 0.9rem;"></p>
+        
+        <div class="loading-text" id="loading-text">Initializing...</div>
     </div>
 
-    <!-- Game Container -->
-    <div id="game-container"></div>
+    <!-- Storyboard Container for Visual Cutscenes -->
+    <div id="storyboard-container" class="storyboard-container">
+        <button id="skip-cutscene-btn">Skip Cutscene (ESC)</button>
+        <div class="storyboard-progress">
+            <div class="storyboard-progress-bar" id="storyboard-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
 
     <!-- Game UI -->
     <div id="game-ui"></div>
 
-    <!-- Effects -->
+    <!-- Visual Effects -->
     <div class="damage-flash" id="damage-flash"></div>
-    <div class="fear-effect" id="fear-effect"></div>
+    <div class="fear-overlay" id="fear-overlay"></div>
+    <div class="vignette"></div>
+    
+    <!-- Jump Scare -->
+    <div class="jump-scare" id="jump-scare"></div>
 
-    <!-- Instructions -->
-    <div id="instructions">
-        <p>WASD: Move | Shift: Sprint | Mouse: Look | F: Flashlight</p>
-        <p>E: Interact | H: Heal | C: Crouch | ESC: Pause</p>
+    <!-- Glitch Effect -->
+    <div class="glitch" id="glitch-effect"></div>
+
+    <!-- UI Elements -->
+    <div id="controls-hint">
+        WASD: Move | Mouse: Look | Shift: Sprint | F: Flashlight | C: Crouch | H: Heal
     </div>
+    
+    <button id="audio-toggle">🔊</button>
 
+    <!-- Import Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+    
     <!-- Game Script -->
-    <script src="script.js"></script>
+    <script>
+        // Main game script - all in one file for fast loading
+    </script>
 </body>
 </html>
