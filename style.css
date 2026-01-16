@@ -1,15 +1,43 @@
-body { margin:0; overflow:hidden; font-family:sans-serif; background:#cfd8dc; }
-#hud { position:absolute; top:10px; left:10px; color:white; font-size:18px; z-index:100; }
-#inventoryBox { margin-top:5px; }
-#choiceContainer {
-  display:none;
-  position:absolute;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:100;
-  flex-direction:column;
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #9bb0b5; /* daylight sky color */
 }
+
+canvas {
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-family: Arial, sans-serif;
+  z-index: 10;
+}
+
+#fearOverlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#choiceContainer {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 10;
+}
+
 #choiceContainer button {
-  margin:5px; padding:10px 20px; font-size:16px; cursor:pointer;
+  padding: 10px 20px;
+  margin: 5px;
+  font-size: 16px;
 }
