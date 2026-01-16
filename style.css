@@ -1,40 +1,15 @@
-body {
-  margin: 0;
-  overflow: hidden; /* prevent scrollbars */
-  cursor: none; /* hide cursor in first person */
-  font-family: Arial, sans-serif;
-  background: black;
-}
-
-/* HUD */
-#hud {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  color: white;
-  z-index: 200;
-  font-size: 18px;
-}
-
-/* Dialogue Choices */
+body { margin:0; overflow:hidden; font-family:sans-serif; background:#cfd8dc; }
+#hud { position:absolute; top:10px; left:10px; color:white; font-size:18px; z-index:100; }
+#inventoryBox { margin-top:5px; }
 #choiceContainer {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  z-index: 300;
+  display:none;
+  position:absolute;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:100;
+  flex-direction:column;
 }
-
 #choiceContainer button {
-  margin: 5px;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* Fullscreen */
-html, body {
-  height: 100%;
-  width: 100%;
+  margin:5px; padding:10px 20px; font-size:16px; cursor:pointer;
 }
