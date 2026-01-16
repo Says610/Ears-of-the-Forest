@@ -1,22 +1,36 @@
+/* RESET */
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   background: black;
   font-family: Arial, sans-serif;
 }
 
-/* Start screen */
+/* FORCE CANVAS VISIBLE */
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  display: block;
+}
+
+/* START SCREEN (NO LONGER BLOCKS FOREVER) */
 #startScreen {
   position: fixed;
   inset: 0;
-  background: black;
+  background: rgba(0, 0, 0, 0.9);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  z-index: 10;
+  z-index: 5;
   cursor: pointer;
 }
 
@@ -27,6 +41,16 @@ html, body {
   left: 10px;
   color: white;
   font-size: 14px;
-  z-index: 5;
+  z-index: 10;
   pointer-events: none;
+}
+
+/* OPTIONAL DEBUG TEXT */
+#debug {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  color: lime;
+  z-index: 20;
+  font-size: 12px;
 }
