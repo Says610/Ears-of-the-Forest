@@ -1,566 +1,68 @@
 /* =========================================================
-   EARS OF THE FOREST - WORKING CUTSCENES
+   EARS OF THE FOREST - FINAL INTEGRATED SCRIPT
 ========================================================= */
 
 // ===============================
-// CUTSCENE SYSTEM (FIXED)
+// GAME INITIALIZATION
 // ===============================
-class CutsceneSystem {
-    constructor() {
-        this.currentCutscene = null;
-        this.cutsceneTime = 0;
-        this.dialogueIndex = 0;
-        this.isPlaying = false;
-        this.onComplete = null;
-        this.visuals = [];
-        this.dialogueTimeout = null;
-        
-        // Store CSS styles
-        this.addCutsceneStyles();
-        
-        // Create UI
-        this.createCutsceneUI();
-    }
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("Starting Ears of the Forest...");
     
-    addCutsceneStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0%, 100% { opacity: 0.5; }
-                50% { opacity: 1; }
-            }
-            
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(20px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            
-            @keyframes fadeOut {
-                from { opacity: 1; }
-                to { opacity: 0; }
-            }
-            
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-                20%, 40%, 60%, 80% { transform: translateX(5px); }
-            }
-            
-            @keyframes glow {
-                0%, 100% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
-                50% { box-shadow: 0 0 40px rgba(76, 175, 80, 0.8); }
-            }
-            
-            #cutscene-container {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                background: #000 !important;
-                z-index: 9999 !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: center !important;
-                align-items: center !important;
-                font-family: 'Arial', sans-serif !important;
-            }
-            
-            #cutscene-dialogue {
-                max-width: 800px;
-                text-align: center;
-                padding: 30px;
-                background: rgba(0, 0, 0, 0.9);
-                border-radius: 10px;
-                border: 2px solid #4CAF50;
-                animation: fadeIn 0.5s ease-out;
-            }
-            
-            #cutscene-text {
-                font-size: 1.8rem;
-                color: white;
-                margin-bottom: 20px;
-                line-height: 1.5;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            }
-            
-            #cutscene-character {
-                font-size: 1.2rem;
-                color: #4CAF50;
-                font-style: italic;
-                margin-bottom: 10px;
-            }
-            
-            #cutscene-continue {
-                font-size: 1rem;
-                color: #888;
-                animation: pulse 1.5s infinite;
-                margin-top: 20px;
-            }
-            
-            .cinematic-bar {
-                position: absolute;
-                left: 0;
-                width: 100%;
-                height: 100px;
-                background: rgba(0,0,0,0.8);
-                z-index: 1;
-            }
-            
-            .cinematic-bar.top {
-                top: 0;
-                background: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
-            }
-            
-            .cinematic-bar.bottom {
-                bottom: 0;
-                background: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
-            }
-            
-            .cutscene-effect {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                z-index: 0;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    createCutsceneUI() {
-        // Remove existing
-        const existing = document.getElementById('cutscene-container');
-        if (existing) existing.remove();
+    // Hide loading screen after a moment
+    setTimeout(() => {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
         
-        // Create container
-        const container = document.createElement('div');
-        container.id = 'cutscene-container';
-        document.body.appendChild(container);
-        
-        // Add click handler
-        container.addEventListener('click', () => this.advanceDialogue());
-    }
-    
-    play(cutsceneName, onComplete = null) {
-        console.log(`Starting cutscene: ${cutsceneName}`);
-        
-        // Define cutscenes
-        const cutscenes = {
-            opening: {
-                name: "Field Trip",
-                dialogues: [
-                    {
-                        text: "Wake up, sleepyhead! Today's the big field trip to the national forest!",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "Ugh... five more minutes...",
-                        character: "You",
-                        delay: 2
-                    },
-                    {
-                        text: "No way! We're going to see the oldest trees in the state! I heard there's one over 500 years old!",
-                        character: "Alex",
-                        delay: 4
-                    },
-                    {
-                        text: "Alright, alright, I'm up. Did you pack extra snacks?",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "Duh! And I brought my new hiking boots. Let's catch the bus before it leaves without us!",
-                        character: "Alex",
-                        delay: 4
-                    },
-                    {
-                        text: "The bus ride is bumpy but filled with laughter. You and Alex joke about school and what you might find.",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "As you enter the forest, the teacher gives instructions...",
-                        character: "Narrator",
-                        delay: 3
-                    },
-                    {
-                        text: "Stay on the marked paths, stay with your partner, and be back by 3 PM sharp!",
-                        character: "Teacher",
-                        delay: 4
-                    },
-                    {
-                        text: "You and Alex decide to explore deeper, convinced you'll find something amazing...",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "Wait... which way did we come from?",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "I thought you were keeping track!",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "The path disappears. The trees look the same in every direction. And it's getting darker...",
-                        character: "Narrator",
-                        delay: 5
-                    },
-                    {
-                        text: "You hear a distant howl. It's not just lost anymore...",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "Find your way out. Watch for wolves. Use your flashlight wisely.",
-                        character: "Narrator",
-                        delay: 4
-                    }
-                ]
-            },
-            goodEnding: {
-                name: "Safe Return",
-                dialogues: [
-                    {
-                        text: "You see it! The edge of the forest! The parking lot!",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "We made it... we actually made it!",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "The teacher rushes over as you stumble out of the trees.",
-                        character: "Narrator",
-                        delay: 3
-                    },
-                    {
-                        text: "We were so worried! The search party was about to go in after dark!",
-                        character: "Teacher",
-                        delay: 4
-                    },
-                    {
-                        text: "Wolves... there were wolves...",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "The ride home is quiet. Everyone is exhausted but safe.",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "GOOD ENDING: SURVIVAL",
-                        character: "",
-                        delay: 4
-                    },
-                    {
-                        text: "You and Alex made it out alive.",
-                        character: "",
-                        delay: 3
-                    }
-                ]
-            },
-            badEnding: {
-                name: "The Feast",
-                dialogues: [
-                    {
-                        text: "There's too many of them... we're surrounded!",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "Just keep moving! Don't look back!",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "A snarl comes from the left. Then the right. Yellow eyes appear.",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "I can't run anymore... my leg...",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "Get up! Please, get up!",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "The wolves close in. Their breath is hot. Their eyes are hungry.",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "I'm sorry... I'm so sorry...",
-                        character: "Alex",
-                        delay: 3
-                    },
-                    {
-                        text: "NO!",
-                        character: "You",
-                        delay: 2
-                    },
-                    {
-                        text: "BAD ENDING: THE FEAST",
-                        character: "",
-                        delay: 4
-                    },
-                    {
-                        text: "The forest claimed new victims.",
-                        character: "",
-                        delay: 3
-                    }
-                ]
-            },
-            secretEnding: {
-                name: "Heartseed Tree",
-                dialogues: [
-                    {
-                        text: "What... what is this place?",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "Before you stands a magnificent tree. Its bark glows with soft light.",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "Welcome, child of the forest. I am the Heartseed.",
-                        character: "Heartseed Tree",
-                        delay: 4
-                    },
-                    {
-                        text: "You... you can talk?",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "I am the memory of this forest. You have wandered far.",
-                        character: "Heartseed Tree",
-                        delay: 4
-                    },
-                    {
-                        text: "The tree's voice isn't just in your ears. It's in everything.",
-                        character: "Narrator",
-                        delay: 4
-                    },
-                    {
-                        text: "I hear it... I hear everything...",
-                        character: "You",
-                        delay: 3
-                    },
-                    {
-                        text: "Goodbye, Alex. Tell them I found what I was looking for.",
-                        character: "You",
-                        delay: 4
-                    },
-                    {
-                        text: "SECRET ENDING: BECOMING",
-                        character: "",
-                        delay: 4
-                    },
-                    {
-                        text: "You became part of the forest.",
-                        character: "",
-                        delay: 3
-                    }
-                ]
-            }
-        };
-        
-        if (!cutscenes[cutsceneName]) {
-            console.error(`Cutscene "${cutsceneName}" not found`);
-            if (onComplete) onComplete();
-            return;
-        }
-        
-        this.currentCutscene = cutscenes[cutsceneName];
-        this.cutsceneTime = 0;
-        this.dialogueIndex = 0;
-        this.isPlaying = true;
-        this.onComplete = onComplete;
-        
-        // Show container
-        const container = document.getElementById('cutscene-container');
-        container.style.display = 'flex';
-        
-        // Set background based on cutscene
-        if (cutsceneName === 'badEnding') {
-            container.style.background = 'linear-gradient(45deg, #330000, #000000)';
-        } else if (cutsceneName === 'secretEnding') {
-            container.style.background = 'linear-gradient(45deg, #0a2f0a, #000000)';
-        } else {
-            container.style.background = '#000';
-        }
-        
-        // Add cinematic bars
-        this.addCinematicBars();
-        
-        // Start first dialogue
-        this.showDialogue();
-        
-        // Update game state
-        GameState.isInCutscene = true;
-        GameState.isPaused = true;
-        
-        console.log("Cutscene started successfully");
-    }
-    
-    addCinematicBars() {
-        const container = document.getElementById('cutscene-container');
-        
-        // Remove existing bars
-        const existingBars = container.querySelectorAll('.cinematic-bar');
-        existingBars.forEach(bar => bar.remove());
-        
-        // Add top bar
-        const topBar = document.createElement('div');
-        topBar.className = 'cinematic-bar top';
-        container.appendChild(topBar);
-        
-        // Add bottom bar
-        const bottomBar = document.createElement('div');
-        bottomBar.className = 'cinematic-bar bottom';
-        container.appendChild(bottomBar);
-    }
-    
-    showDialogue() {
-        if (!this.currentCutscene || this.dialogueIndex >= this.currentCutscene.dialogues.length) {
-            this.endCutscene();
-            return;
-        }
-        
-        const dialogue = this.currentCutscene.dialogues[this.dialogueIndex];
-        const container = document.getElementById('cutscene-container');
-        
-        // Clear previous dialogue
-        const existingDialogue = container.querySelector('#cutscene-dialogue');
-        if (existingDialogue) existingDialogue.remove();
-        
-        // Create new dialogue box
-        const dialogueBox = document.createElement('div');
-        dialogueBox.id = 'cutscene-dialogue';
-        
-        const dialogueText = document.createElement('div');
-        dialogueText.id = 'cutscene-text';
-        dialogueText.textContent = dialogue.text;
-        
-        const characterName = document.createElement('div');
-        characterName.id = 'cutscene-character';
-        characterName.textContent = dialogue.character;
-        
-        const continuePrompt = document.createElement('div');
-        continuePrompt.id = 'cutscene-continue';
-        continuePrompt.textContent = 'CLICK TO CONTINUE';
-        
-        dialogueBox.appendChild(dialogueText);
-        if (dialogue.character) {
-            dialogueBox.appendChild(characterName);
-        }
-        dialogueBox.appendChild(continuePrompt);
-        
-        container.appendChild(dialogueBox);
-        
-        // Apply special effects for titles
-        if (dialogue.text.includes('ENDING:')) {
-            dialogueText.style.fontSize = '2.5rem';
-            dialogueText.style.color = dialogue.text.includes('GOOD') ? '#4CAF50' : 
-                                     dialogue.text.includes('BAD') ? '#ff4444' : 
-                                     dialogue.text.includes('SECRET') ? '#8BC34A' : '#ffffff';
-            dialogueText.style.textShadow = '0 0 20px currentColor';
-            dialogueText.style.animation = 'glow 2s infinite';
-        }
-        
-        // Clear any previous timeout
-        if (this.dialogueTimeout) {
-            clearTimeout(this.dialogueTimeout);
-        }
-        
-        // Auto-advance after delay
-        this.dialogueTimeout = setTimeout(() => {
-            this.advanceDialogue();
-        }, dialogue.delay * 1000);
-        
-        this.dialogueIndex++;
-    }
-    
-    advanceDialogue() {
-        if (this.dialogueTimeout) {
-            clearTimeout(this.dialogueTimeout);
-            this.dialogueTimeout = null;
-        }
-        this.showDialogue();
-    }
-    
-    endCutscene() {
-        console.log("Ending cutscene");
-        
-        this.isPlaying = false;
-        this.currentCutscene = null;
-        
-        // Hide container
-        const container = document.getElementById('cutscene-container');
-        container.style.display = 'none';
-        
-        // Clear contents
-        container.innerHTML = '';
-        
-        // Remove any visual effects
-        const effects = document.querySelectorAll('.cutscene-effect');
-        effects.forEach(effect => effect.remove());
-        
-        // Resume game
-        GameState.isInCutscene = false;
-        GameState.isPaused = false;
-        
-        // Call completion callback
-        if (this.onComplete) {
-            console.log("Calling completion callback");
-            setTimeout(() => this.onComplete(), 100);
-        }
-    }
-}
+        // Start the game
+        const game = new Game();
+        game.init();
+    }, 1500);
+});
 
 // ===============================
-// SIMPLE GAME ENGINE
+// GAME CLASS
 // ===============================
-class GameEngine {
+class Game {
     constructor() {
-        this.cutscene = new CutsceneSystem();
-        this.ui = new SimpleUI();
-        this.initialized = false;
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.clock = null;
+        this.controls = null;
+        
+        this.player = {
+            health: 100,
+            stamina: 100,
+            battery: 100,
+            fear: 5,
+            position: new THREE.Vector3(0, 1.7, 5),
+            isGrounded: true
+        };
+        
+        this.input = {
+            forward: false,
+            backward: false,
+            left: false,
+            right: false,
+            sprint: false,
+            flashlight: true
+        };
+        
+        this.gameTime = 0;
+        this.isPaused = false;
+        this.isInCutscene = false;
+        
+        this.cutsceneSystem = new CutsceneSystem();
+        this.ui = new UISystem();
+        
+        console.log("Game instance created");
     }
     
     init() {
-        console.log("GameEngine initializing...");
+        console.log("Initializing game...");
         
-        // Start with opening cutscene
-        this.cutscene.play('opening', () => {
-            console.log("Opening cutscene complete, starting game...");
-            this.startGame();
-        });
-    }
-    
-    startGame() {
-        console.log("Starting game...");
-        
-        // Initialize Three.js if not already
-        if (!GameState.scene) {
-            this.initThreeJS();
-        }
+        // Setup Three.js
+        this.setupThreeJS();
         
         // Setup world
         this.setupWorld();
@@ -568,79 +70,71 @@ class GameEngine {
         // Setup input
         this.setupInput();
         
-        // Show UI
-        this.ui.show();
+        // Setup UI
+        this.ui.init();
         
-        // Start game loop
-        this.startGameLoop();
-        
-        // Show initial message
-        this.ui.showNotification("You're lost in the forest. Find your way out!");
-        
-        this.initialized = true;
+        // Start with opening cutscene
+        this.cutsceneSystem.play('opening', () => {
+            console.log("Cutscene complete, starting gameplay...");
+            this.startGameplay();
+        });
     }
     
-    initThreeJS() {
-        console.log("Initializing Three.js...");
+    setupThreeJS() {
+        console.log("Setting up Three.js...");
         
         // Scene
-        GameState.scene = new THREE.Scene();
-        GameState.scene.background = new THREE.Color(0x87CEEB);
-        GameState.scene.fog = new THREE.Fog(0xCCCCCC, 20, 150);
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x87CEEB);
+        this.scene.fog = new THREE.Fog(0xcccccc, 20, 150);
         
         // Camera
-        GameState.camera = new THREE.PerspectiveCamera(
+        this.camera = new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
             0.1,
             1000
         );
-        GameState.camera.position.set(0, 1.7, 5);
+        this.camera.position.set(0, 1.7, 5);
         
         // Renderer
-        GameState.renderer = new THREE.WebGLRenderer({ antialias: true });
-        GameState.renderer.setSize(window.innerWidth, window.innerHeight);
-        GameState.renderer.setPixelRatio(window.devicePixelRatio);
-        GameState.renderer.shadowMap.enabled = true;
-        GameState.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         
-        // Add canvas to game container
-        const gameContainer = document.getElementById('game-container') || document.body;
-        gameContainer.appendChild(GameState.renderer.domElement);
-        
-        // Show game container
-        gameContainer.style.display = 'block';
+        // Add to container
+        const container = document.getElementById('game-container');
+        container.appendChild(this.renderer.domElement);
         
         // Clock
-        GameState.clock = new THREE.Clock();
+        this.clock = new THREE.Clock();
         
-        // Simple controls (no pointer lock for now)
-        GameState.controls = {
-            getObject: () => ({ position: GameState.camera.position })
-        };
-        
-        // Handle window resize
+        // Handle resize
         window.addEventListener('resize', () => {
-            GameState.camera.aspect = window.innerWidth / window.innerHeight;
-            GameState.camera.updateProjectionMatrix();
-            GameState.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
+        
+        console.log("Three.js setup complete");
     }
     
     setupWorld() {
-        console.log("Setting up world...");
+        console.log("Building world...");
         
         // Lighting
         const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-        GameState.scene.add(ambientLight);
+        this.scene.add(ambientLight);
         
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
         directionalLight.position.set(100, 200, 100);
         directionalLight.castShadow = true;
-        GameState.scene.add(directionalLight);
+        this.scene.add(directionalLight);
         
         // Ground
-        const groundGeometry = new THREE.PlaneGeometry(200, 200, 32, 32);
+        const groundGeometry = new THREE.PlaneGeometry(200, 200);
         const groundMaterial = new THREE.MeshStandardMaterial({
             color: 0x4f6b4f,
             roughness: 0.9
@@ -649,18 +143,18 @@ class GameEngine {
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -1;
         ground.receiveShadow = true;
-        GameState.scene.add(ground);
+        this.scene.add(ground);
         
-        // Add some trees
-        this.createTrees(20);
+        // Add trees
+        this.addTrees(30);
         
         // Add a path
-        this.createPath();
+        this.addPath();
         
-        console.log("World setup complete");
+        console.log("World built");
     }
     
-    createTrees(count) {
+    addTrees(count) {
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1f });
         const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f5f2f });
         
@@ -668,7 +162,6 @@ class GameEngine {
             const x = (Math.random() - 0.5) * 180;
             const z = (Math.random() - 0.5) * 180;
             
-            // Avoid center area
             if (Math.abs(x) < 20 && Math.abs(z) < 20) continue;
             
             // Trunk
@@ -678,7 +171,7 @@ class GameEngine {
             );
             trunk.position.set(x, 2.5, z);
             trunk.castShadow = true;
-            GameState.scene.add(trunk);
+            this.scene.add(trunk);
             
             // Leaves
             const leaves = new THREE.Mesh(
@@ -687,11 +180,11 @@ class GameEngine {
             );
             leaves.position.set(x, 6, z);
             leaves.castShadow = true;
-            GameState.scene.add(leaves);
+            this.scene.add(leaves);
         }
     }
     
-    createPath() {
+    addPath() {
         const pathMat = new THREE.MeshStandardMaterial({
             color: 0x6b5a3a,
             roughness: 1
@@ -702,38 +195,37 @@ class GameEngine {
         );
         path.rotation.x = -Math.PI / 2;
         path.position.y = -0.9;
-        GameState.scene.add(path);
+        this.scene.add(path);
     }
     
     setupInput() {
         console.log("Setting up input...");
         
-        // Movement keys
+        // Movement
         document.addEventListener('keydown', (e) => {
+            if (this.isInCutscene || this.isPaused) return;
+            
             switch(e.code) {
-                case 'KeyW': GameState.input.forward = true; break;
-                case 'KeyS': GameState.input.backward = true; break;
-                case 'KeyA': GameState.input.left = true; break;
-                case 'KeyD': GameState.input.right = true; break;
-                case 'ShiftLeft': GameState.input.sprint = true; break;
-                case 'Space': GameState.input.jump = true; break;
+                case 'KeyW': this.input.forward = true; break;
+                case 'KeyS': this.input.backward = true; break;
+                case 'KeyA': this.input.left = true; break;
+                case 'KeyD': this.input.right = true; break;
+                case 'ShiftLeft': this.input.sprint = true; break;
                 case 'KeyF': 
-                    GameState.input.flashlight = !GameState.input.flashlight;
-                    this.ui.showNotification(GameState.input.flashlight ? "Flashlight ON" : "Flashlight OFF");
+                    this.input.flashlight = !this.input.flashlight;
+                    this.ui.showNotification(`Flashlight ${this.input.flashlight ? 'ON' : 'OFF'}`);
                     break;
                 case 'KeyH':
-                    if (GameState.inventory.medkits > 0) {
-                        GameState.player.health = Math.min(100, GameState.player.health + 40);
-                        GameState.inventory.medkits--;
-                        this.ui.updateAll();
-                        this.ui.showNotification("Used Medkit: +40 Health");
+                    if (this.player.health < 100) {
+                        this.player.health = Math.min(100, this.player.health + 40);
+                        this.ui.updateHealth(this.player.health);
+                        this.ui.showNotification("Used medkit: +40 health");
                     }
                     break;
                 case 'Escape':
                     this.togglePause();
                     break;
                 case 'KeyR':
-                    // Test ending cutscenes
                     if (e.shiftKey) {
                         this.testEnding('goodEnding');
                     }
@@ -743,67 +235,33 @@ class GameEngine {
         
         document.addEventListener('keyup', (e) => {
             switch(e.code) {
-                case 'KeyW': GameState.input.forward = false; break;
-                case 'KeyS': GameState.input.backward = false; break;
-                case 'KeyA': GameState.input.left = false; break;
-                case 'KeyD': GameState.input.right = false; break;
-                case 'ShiftLeft': GameState.input.sprint = false; break;
-                case 'Space': GameState.input.jump = false; break;
+                case 'KeyW': this.input.forward = false; break;
+                case 'KeyS': this.input.backward = false; break;
+                case 'KeyA': this.input.left = false; break;
+                case 'KeyD': this.input.right = false; break;
+                case 'ShiftLeft': this.input.sprint = false; break;
             }
         });
         
-        // Click to start movement
+        // Mouse click for camera control
         document.addEventListener('click', () => {
-            if (!GameState.isPaused && !GameState.isInCutscene) {
-                // Start moving camera
-                console.log("Game controls active");
+            if (!this.isInCutscene && !this.isPaused) {
+                this.camera.lookAt(0, 1.7, 0);
             }
         });
     }
     
-    updatePlayer(delta) {
-        if (GameState.isPaused || GameState.isInCutscene) return;
+    startGameplay() {
+        console.log("Starting gameplay...");
         
-        const speed = GameState.input.sprint ? 10 : 5;
+        // Show game UI
+        this.ui.show();
         
-        // Movement
-        if (GameState.input.forward) {
-            GameState.camera.position.z -= speed * delta;
-        }
-        if (GameState.input.backward) {
-            GameState.camera.position.z += speed * delta;
-        }
-        if (GameState.input.left) {
-            GameState.camera.position.x -= speed * delta;
-        }
-        if (GameState.input.right) {
-            GameState.camera.position.x += speed * delta;
-        }
+        // Start game loop
+        this.startGameLoop();
         
-        // Update player position
-        GameState.player.position.copy(GameState.camera.position);
-        
-        // Update game time
-        GameState.gameTime += delta;
-        
-        // Update UI
-        this.ui.updateAll();
-        
-        // Check for endings (test)
-        if (GameState.camera.position.z < -150) {
-            this.triggerGoodEnding();
-        }
-        
-        if (GameState.player.health <= 0) {
-            this.triggerBadEnding();
-        }
-        
-        // Simulate wolf encounter after 30 seconds
-        if (GameState.gameTime > 30 && !GameState.events.firstWolfSpawned) {
-            GameState.events.firstWolfSpawned = true;
-            this.ui.showNotification("You hear a wolf howl in the distance...");
-            GameState.player.fear += 20;
-        }
+        // Show welcome message
+        this.ui.showNotification("You're lost in the forest. Find your way out!");
     }
     
     startGameLoop() {
@@ -812,413 +270,254 @@ class GameEngine {
         const animate = () => {
             requestAnimationFrame(animate);
             
-            const delta = GameState.clock.getDelta();
+            const delta = this.clock.getDelta();
             
-            // Update player
-            this.updatePlayer(delta);
-            
-            // Render scene
-            if (GameState.renderer && GameState.scene && GameState.camera) {
-                GameState.renderer.render(GameState.scene, GameState.camera);
+            if (!this.isPaused && !this.isInCutscene) {
+                this.updateGame(delta);
             }
             
-            // Update frame counter
-            this.ui.frameCount++;
-            if (this.ui.frameCount % 60 === 0) {
-                this.ui.updateTime();
-            }
+            this.renderer.render(this.scene, this.camera);
         };
         
         animate();
     }
     
-    togglePause() {
-        GameState.isPaused = !GameState.isPaused;
-        if (GameState.isPaused) {
-            this.ui.showPauseMenu();
-        } else {
-            this.ui.hidePauseMenu();
+    updateGame(delta) {
+        // Update game time
+        this.gameTime += delta;
+        
+        // Update player movement
+        this.updatePlayer(delta);
+        
+        // Update player stats
+        this.updateStats(delta);
+        
+        // Update UI
+        this.ui.updateAll(this.player, this.gameTime);
+        
+        // Check for events
+        this.checkEvents();
+        
+        // Check for endings
+        this.checkEndings();
+    }
+    
+    updatePlayer(delta) {
+        const speed = this.input.sprint ? 10 : 5;
+        
+        // Forward/backward
+        if (this.input.forward) {
+            this.camera.position.z -= speed * delta;
+        }
+        if (this.input.backward) {
+            this.camera.position.z += speed * delta;
+        }
+        
+        // Left/right
+        if (this.input.left) {
+            this.camera.position.x -= speed * delta;
+        }
+        if (this.input.right) {
+            this.camera.position.x += speed * delta;
+        }
+        
+        // Update player position
+        this.player.position.copy(this.camera.position);
+    }
+    
+    updateStats(delta) {
+        // Drain stamina when sprinting
+        if (this.input.sprint && this.player.stamina > 0) {
+            this.player.stamina -= 20 * delta;
+        } else if (this.player.stamina < 100) {
+            this.player.stamina += 10 * delta;
+        }
+        this.player.stamina = Math.max(0, Math.min(100, this.player.stamina));
+        
+        // Drain battery when flashlight on
+        if (this.input.flashlight && this.player.battery > 0) {
+            this.player.battery -= 5 * delta;
+            if (this.player.battery <= 0) {
+                this.input.flashlight = false;
+                this.ui.showNotification("Flashlight battery dead!");
+            }
+        }
+        this.player.battery = Math.max(0, Math.min(100, this.player.battery));
+        
+        // Increase fear over time
+        this.player.fear += 0.5 * delta;
+        this.player.fear = Math.min(100, this.player.fear);
+        
+        // Random health drain (simulating wolf attacks)
+        if (Math.random() < 0.001) {
+            this.player.health -= 5;
+            this.ui.showDamageFlash();
+        }
+        this.player.health = Math.max(0, this.player.health);
+    }
+    
+    checkEvents() {
+        // First wolf at 30 seconds
+        if (this.gameTime > 30 && !this.firstWolfEvent) {
+            this.firstWolfEvent = true;
+            this.player.fear += 20;
+            this.ui.showNotification("You hear a wolf howl in the distance...");
+        }
+        
+        // Wolf pack at 60 seconds
+        if (this.gameTime > 60 && !this.wolfPackEvent) {
+            this.wolfPackEvent = true;
+            this.player.fear += 30;
+            this.ui.showNotification("Multiple wolves are nearby...");
         }
     }
     
-    triggerGoodEnding() {
-        console.log("Triggering good ending...");
-        GameState.isPaused = true;
-        this.cutscene.play('goodEnding', () => {
-            this.showEndScreen('good');
-        });
+    checkEndings() {
+        // Bad ending - player dies
+        if (this.player.health <= 0) {
+            this.triggerEnding('badEnding');
+            return;
+        }
+        
+        // Good ending - reach far north
+        if (this.player.position.z < -150) {
+            this.triggerEnding('goodEnding');
+            return;
+        }
+        
+        // Secret ending - high fear and specific location
+        if (this.player.fear > 80 && this.player.position.x > 100 && this.player.position.z < -100) {
+            this.triggerEnding('secretEnding');
+            return;
+        }
     }
     
-    triggerBadEnding() {
-        console.log("Triggering bad ending...");
-        GameState.isPaused = true;
-        this.cutscene.play('badEnding', () => {
-            this.showEndScreen('bad');
+    triggerEnding(ending) {
+        console.log(`Triggering ${ending}...`);
+        this.isPaused = true;
+        this.cutsceneSystem.play(ending, () => {
+            this.showEndScreen(ending);
         });
     }
     
     testEnding(ending) {
-        console.log(`Testing ${ending}...`);
-        GameState.isPaused = true;
-        this.cutscene.play(ending, () => {
-            this.showEndScreen(ending.replace('Ending', '').toLowerCase());
-        });
+        this.triggerEnding(ending);
     }
     
-    showEndScreen(type) {
-        const color = type === 'good' ? '#4CAF50' : 
-                     type === 'bad' ? '#ff4444' : '#8BC34A';
-        
-        const title = type === 'good' ? 'GOOD ENDING' :
-                     type === 'bad' ? 'BAD ENDING' : 'SECRET ENDING';
-        
+    showEndScreen(ending) {
         const endScreen = document.createElement('div');
-        endScreen.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-family: Arial, sans-serif;
-        `;
+        endScreen.id = 'end-screen';
+        
+        const colors = {
+            goodEnding: '#4CAF50',
+            badEnding: '#f44336',
+            secretEnding: '#8BC34A'
+        };
+        
+        const titles = {
+            goodEnding: 'GOOD ENDING - SAFE RETURN',
+            badEnding: 'BAD ENDING - THE FEAST',
+            secretEnding: 'SECRET ENDING - BECOMING'
+        };
+        
+        const messages = {
+            goodEnding: 'You and Alex escaped the forest together.',
+            badEnding: 'The wolves were too many...',
+            secretEnding: 'You became one with the forest.'
+        };
         
         endScreen.innerHTML = `
-            <h1 style="font-size: 3rem; color: ${color}; margin-bottom: 2rem; text-shadow: 0 0 20px ${color}">
-                ${title}
-            </h1>
-            <p style="font-size: 1.5rem; margin-bottom: 3rem; text-align: center; max-width: 600px">
-                ${type === 'good' ? 'You escaped the forest with Alex!' : 
-                 type === 'bad' ? 'The wolves were too many...' : 
-                 'You became one with the forest.'}
-            </p>
-            <div style="margin-bottom: 3rem; font-size: 1.2rem; color: #888">
-                Time Survived: ${Math.floor(GameState.gameTime)} seconds
+            <h1 style="color: ${colors[ending]}">${titles[ending]}</h1>
+            <p>${messages[ending]}</p>
+            <p>Time survived: ${Math.floor(this.gameTime)} seconds</p>
+            <div>
+                <button id="restart-btn">Play Again</button>
+                <button id="end-menu-btn">Main Menu</button>
             </div>
-            <button id="restart-btn" style="
-                background: ${color};
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                font-size: 1.2rem;
-                border-radius: 8px;
-                cursor: pointer;
-                margin: 10px;
-            ">
-                Play Again
-            </button>
-            <button id="menu-btn" style="
-                background: #333;
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                font-size: 1.2rem;
-                border-radius: 8px;
-                cursor: pointer;
-                margin: 10px;
-            ">
-                Main Menu
-            </button>
         `;
         
         document.body.appendChild(endScreen);
+        endScreen.style.display = 'flex';
         
         document.getElementById('restart-btn').addEventListener('click', () => {
             location.reload();
         });
         
-        document.getElementById('menu-btn').addEventListener('click', () => {
+        document.getElementById('end-menu-btn').addEventListener('click', () => {
             endScreen.remove();
-            GameState.isPaused = false;
-            // Return to main menu would go here
+            this.isPaused = false;
+            // Would return to main menu
         });
+    }
+    
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        this.ui.togglePauseMenu(this.isPaused);
     }
 }
 
 // ===============================
-// SIMPLE UI
+// CUTSCENE SYSTEM
 // ===============================
-class SimpleUI {
+class CutsceneSystem {
     constructor() {
-        this.frameCount = 0;
-        this.createUI();
+        this.currentCutscene = null;
+        this.isPlaying = false;
+        this.dialogueIndex = 0;
+        this.timeout = null;
     }
     
-    createUI() {
-        // Remove existing UI
-        const existing = document.getElementById('game-ui');
-        if (existing) existing.remove();
+    play(cutsceneName, onComplete) {
+        console.log(`Playing cutscene: ${cutsceneName}`);
         
-        // Create UI container
-        const ui = document.createElement('div');
-        ui.id = 'game-ui';
-        ui.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-            font-family: Arial, sans-serif;
-            color: white;
-            text-shadow: 1px 1px 2px black;
-        `;
+        const cutscenes = {
+            opening: [
+                { text: "Wake up! Today's the field trip!", character: "Alex", delay: 3 },
+                { text: "Ugh... five more minutes...", character: "You", delay: 2 },
+                { text: "We're going to see ancient trees!", character: "Alex", delay: 3 },
+                { text: "The bus ride is bumpy but fun.", character: "Narrator", delay: 3 },
+                { text: "Stay on the paths! Be back by 3 PM!", character: "Teacher", delay: 3 },
+                { text: "You explore deeper...", character: "Narrator", delay: 2 },
+                { text: "Wait... which way back?", character: "Alex", delay: 3 },
+                { text: "I thought you knew!", character: "You", delay: 2 },
+                { text: "The path is gone. It's getting dark.", character: "Narrator", delay: 3 },
+                { text: "A wolf howls in the distance...", character: "Narrator", delay: 3 },
+                { text: "Find your way out. Watch for wolves.", character: "Narrator", delay: 3 }
+            ],
+            goodEnding: [
+                { text: "The parking lot! We made it!", character: "Alex", delay: 3 },
+                { text: "We actually survived!", character: "You", delay: 3 },
+                { text: "GOOD ENDING: SAFE RETURN", character: "", delay: 4 },
+                { text: "You escaped the forest with Alex.", character: "", delay: 3 }
+            ],
+            badEnding: [
+                { text: "Too many wolves...", character: "Alex", delay: 3 },
+                { text: "Keep moving!", character: "You", delay: 2 },
+                { text: "I can't run anymore...", character: "Alex", delay: 3 },
+                { text: "The wolves close in...", character: "Narrator", delay: 3 },
+                { text: "BAD ENDING: THE FEAST", character: "", delay: 4 },
+                { text: "The forest claimed new victims.", character: "", delay: 3 }
+            ],
+            secretEnding: [
+                { text: "What is this place?", character: "You", delay: 3 },
+                { text: "A glowing tree stands before you.", character: "Narrator", delay: 3 },
+                { text: "Welcome. I am the Heartseed.", character: "Tree", delay: 3 },
+                { text: "The tree's voice is in everything.", character: "Narrator", delay: 3 },
+                { text: "I understand now...", character: "You", delay: 3 },
+                { text: "SECRET ENDING: BECOMING", character: "", delay: 4 },
+                { text: "You became part of the forest.", character: "", delay: 3 }
+            ]
+        };
         
-        // Health
-        ui.innerHTML += `
-            <div style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: #ff4444; font-size: 1.5rem;">❤️</span>
-                    <div style="width: 150px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
-                        <div id="health-bar" style="height: 100%; background: #ff4444; width: 100%;"></div>
-                    </div>
-                    <span id="health-text" style="font-weight: bold;">100</span>
-                </div>
-            </div>
-        `;
-        
-        // Fear
-        ui.innerHTML += `
-            <div style="position: absolute; top: 70px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: #aa44ff; font-size: 1.5rem;">😨</span>
-                    <div style="width: 150px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
-                        <div id="fear-bar" style="height: 100%; background: #aa44ff; width: 5%;"></div>
-                    </div>
-                    <span id="fear-text" style="font-weight: bold;">5</span>
-                </div>
-            </div>
-        `;
-        
-        // Battery
-        ui.innerHTML += `
-            <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: #44aaff; font-size: 1.5rem;">🔦</span>
-                    <span id="battery-text" style="font-weight: bold;">100%</span>
-                </div>
-            </div>
-        `;
-        
-        // Time
-        ui.innerHTML += `
-            <div style="position: absolute; top: 70px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: #4CAF50; font-size: 1.5rem;">🕐</span>
-                    <span id="time-text" style="font-weight: bold;">0:00</span>
-                </div>
-            </div>
-        `;
-        
-        // Inventory
-        ui.innerHTML += `
-            <div style="position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <div style="font-weight: bold; margin-bottom: 5px;">Inventory</div>
-                <div>Medkits: <span id="medkit-count">1</span></div>
-                <div>Batteries: <span id="battery-count">2</span></div>
-            </div>
-        `;
-        
-        // Notification
-        ui.innerHTML += `
-            <div id="notification" style="
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(0,0,0,0.9);
-                padding: 20px 40px;
-                border-radius: 10px;
-                border: 2px solid #4CAF50;
-                text-align: center;
-                opacity: 0;
-                transition: opacity 0.3s;
-                pointer-events: none;
-            ">
-                <span id="notification-text"></span>
-            </div>
-        `;
-        
-        // Crosshair
-        ui.innerHTML += `
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                <div style="width: 4px; height: 4px; background: white; border-radius: 50%; box-shadow: 0 0 5px black;"></div>
-            </div>
-        `;
-        
-        document.body.appendChild(ui);
-        
-        // Create pause menu
-        this.createPauseMenu();
-    }
-    
-    createPauseMenu() {
-        const pauseMenu = document.createElement('div');
-        pauseMenu.id = 'pause-menu';
-        pauseMenu.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-family: Arial, sans-serif;
-        `;
-        
-        pauseMenu.innerHTML = `
-            <h1 style="font-size: 3rem; margin-bottom: 2rem; color: #4CAF50">PAUSED</h1>
-            <div style="margin-bottom: 2rem; font-size: 1.2rem;">
-                <div>Health: ${GameState.player.health}</div>
-                <div>Time: <span id="pause-time">0:00</span></div>
-            </div>
-            <button id="resume-btn" style="
-                background: #4CAF50;
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                font-size: 1.2rem;
-                border-radius: 8px;
-                cursor: pointer;
-                margin: 10px;
-            ">
-                Resume Game
-            </button>
-            <button id="menu-btn" style="
-                background: #333;
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                font-size: 1.2rem;
-                border-radius: 8px;
-                cursor: pointer;
-                margin: 10px;
-            ">
-                Main Menu
-            </button>
-        `;
-        
-        document.body.appendChild(pauseMenu);
-        
-        document.getElementById('resume-btn').addEventListener('click', () => {
-            GameState.isPaused = false;
-            pauseMenu.style.display = 'none';
-        });
-        
-        document.getElementById('menu-btn').addEventListener('click', () => {
-            location.reload();
-        });
-    }
-    
-    show() {
-        const ui = document.getElementById('game-ui');
-        if (ui) ui.style.display = 'block';
-    }
-    
-    hide() {
-        const ui = document.getElementById('game-ui');
-        if (ui) ui.style.display = 'none';
-    }
-    
-    updateAll() {
-        // Health
-        const healthPercent = (GameState.player.health / 100) * 100;
-        const healthBar = document.getElementById('health-bar');
-        const healthText = document.getElementById('health-text');
-        if (healthBar) healthBar.style.width = `${healthPercent}%`;
-        if (healthText) healthText.textContent = Math.round(GameState.player.health);
-        
-        // Fear
-        const fearPercent = (GameState.player.fear / 100) * 100;
-        const fearBar = document.getElementById('fear-bar');
-        const fearText = document.getElementById('fear-text');
-        if (fearBar) fearBar.style.width = `${fearPercent}%`;
-        if (fearText) fearText.textContent = Math.round(GameState.player.fear);
-        
-        // Battery
-        const batteryText = document.getElementById('battery-text');
-        if (batteryText) batteryText.textContent = `${Math.round(GameState.player.battery)}%`;
-        
-        // Inventory
-        const medkitCount = document.getElementById('medkit-count');
-        const batteryCount = document.getElementById('battery-count');
-        if (medkitCount) medkitCount.textContent = GameState.inventory.medkits;
-        if (batteryCount) batteryCount.textContent = GameState.inventory.batteries;
-        
-        // Update pause time
-        const pauseTime = document.getElementById('pause-time');
-        if (pauseTime) {
-            const minutes = Math.floor(GameState.gameTime / 60);
-            const seconds = Math.floor(GameState.gameTime % 60);
-            pauseTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        if (!cutscenes[cutsceneName]) {
+            if (onComplete) onComplete();
+            return;
         }
-    }
-    
-    updateTime() {
-        const timeText = document.getElementById('time-text');
-        if (timeText) {
-            const minutes = Math.floor(GameState.gameTime / 60);
-            const seconds = Math.floor(GameState.gameTime % 60);
-            timeText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-    }
-    
-    showNotification(text, duration = 3000) {
-        const notification = document.getElementById('notification');
-        const notificationText = document.getElementById('notification-text');
         
-        if (notification && notificationText) {
-            notificationText.textContent = text;
-            notification.style.opacity = '1';
-            
-            setTimeout(() => {
-                notification.style.opacity = '0';
-            }, duration);
-        }
-    }
-    
-    showPauseMenu() {
-        const pauseMenu = document.getElementById('pause-menu');
-        if (pauseMenu) {
-            pauseMenu.style.display = 'flex';
-        }
-    }
-    
-    hidePauseMenu() {
-        const pauseMenu = document.getElementById('pause-menu');
-        if (pauseMenu) {
-            pauseMenu.style.display = 'none';
-        }
-    }
-}
-
-// ===============================
-// START THE GAME
-// ===============================
-let game;
-
-window.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM loaded, starting game...");
-    
-    // Create game instance
-    game = new GameEngine();
-    
-    // Start the game
-    game.init();
-});
-
-// Make game accessible from console for testing
-window.Game = game;
-window.GameState = GameState;
+        this.currentCutscene = cutscenes[cutsceneName];
+        this.onComplete = onComplete;
+        this.isPlaying = true;
+        this.dialogueIndex = 0;
+        
+        // Show cutscene container
+        this.showCutsceneContainer
