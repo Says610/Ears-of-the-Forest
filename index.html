@@ -20,8 +20,8 @@
             <div class="progress-bar" id="progress-bar"></div>
         </div>
         
-        <div class="loading-text" id="loading-text">Initializing game systems...</div>
-        <div class="loading-tip" id="loading-tip">Keep your flashlight charged and watch for wolf howls</div>
+        <div class="loading-text" id="loading-text">Initializing...</div>
+        <div class="loading-tip" id="loading-tip"></div>
     </div>
 
     <!-- Game Canvas -->
@@ -64,7 +64,7 @@
             <div class="stat">
                 <div class="stat-icon">🌡️</div>
                 <div class="stat-info">
-                    <div class="stat-name">TEMPERATURE</div>
+                    <div class="stat-name">TEMP</div>
                     <div class="stat-bar">
                         <div class="stat-fill temp-bar" id="temp-bar"></div>
                     </div>
@@ -97,7 +97,7 @@
         <div class="inventory-panel">
             <div class="inventory-title">INVENTORY</div>
             <div class="inventory-item">
-                <span>🔦 Flashlight:</span>
+                <span>🔦 Battery:</span>
                 <span class="item-count" id="inventory-battery">100%</span>
             </div>
             <div class="inventory-item">
@@ -140,14 +140,6 @@
         <div class="notification" id="notification">
             <div class="notification-text" id="notification-text"></div>
         </div>
-
-        <!-- Dialogue Choices -->
-        <div class="dialogue-choices" id="dialogue-choices">
-            <div class="dialogue-question" id="dialogue-question"></div>
-            <div class="dialogue-option" onclick="game.selectDialogue(0)"></div>
-            <div class="dialogue-option" onclick="game.selectDialogue(1)"></div>
-            <div class="dialogue-option" onclick="game.selectDialogue(2)"></div>
-        </div>
     </div>
 
     <!-- Visual Effects -->
@@ -158,7 +150,7 @@
     
     <!-- Jump Scare -->
     <div class="jump-scare" id="jump-scare">
-        <div class="jump-scare-content"></div>
+        <div class="jump-scare-content">⚠️</div>
     </div>
 
     <!-- Cutscenes -->
@@ -221,9 +213,9 @@
     <!-- Pause Menu -->
     <div class="pause-menu" id="pause-menu">
         <h1 class="pause-title">PAUSED</h1>
-        <button class="pause-button" onclick="game.resumeGame()">RESUME</button>
-        <button class="pause-button secondary" onclick="game.restartGame()">RESTART</button>
-        <button class="pause-button secondary" onclick="game.quitToMenu()">QUIT TO MENU</button>
+        <button class="pause-button" id="resume-btn">RESUME</button>
+        <button class="pause-button secondary" id="restart-btn">RESTART</button>
+        <button class="pause-button secondary" id="menu-btn">MAIN MENU</button>
     </div>
 
     <!-- End Screen -->
@@ -231,8 +223,8 @@
         <h1 class="end-title" id="end-title"></h1>
         <div class="end-message" id="end-message"></div>
         <div class="end-stats" id="end-stats"></div>
-        <button class="end-button" onclick="game.restartGame()">PLAY AGAIN</button>
-        <button class="end-button secondary" onclick="game.quitToMenu()">MAIN MENU</button>
+        <button class="end-button" id="end-restart-btn">PLAY AGAIN</button>
+        <button class="end-button secondary" id="end-menu-btn">MAIN MENU</button>
     </div>
 
     <!-- Import Three.js -->
