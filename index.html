@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Ears of the Forest</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <!-- START SCREEN -->
-  <div id="startScreen">
-    <h1>Ears of the Forest</h1>
-    <p>Click to begin</p>
+  <!-- FPS Lock Instructions -->
+  <div id="blocker">
+    <div id="instructions">
+      Click to start and lock mouse for first-person control
+    </div>
   </div>
 
   <!-- HUD -->
   <div id="hud">
     <div id="health">Health: 100</div>
     <div id="battery">Flashlight: 100%</div>
+    <div id="inventoryBox">Inventory:</div>
+    <div id="choiceContainer"></div>
   </div>
 
-  <!-- THREE.JS (MUST COME FIRST) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/PointerLockControls.js"></script>
-
-  <!-- YOUR GAME -->
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/examples/js/controls/PointerLockControls.js"></script>
+  
+  <!-- Main Game Script -->
   <script src="script.js"></script>
 </body>
 </html>
