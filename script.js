@@ -520,4 +520,357 @@ class CutsceneSystem {
         this.dialogueIndex = 0;
         
         // Show cutscene container
-        this.showCutsceneContainer
+        this.showCutsceneContainer();
+        
+        // Start first dialogue
+        this.showDialogue();
+    }
+    
+    showCutsceneContainer() {
+        let container = document.getElementById('cutscene-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'cutscene-container';
+            document.body.appendChild(container);
+        }
+        
+        container.style.display = 'flex';
+        
+        // Set background color based on cutscene
+        const bgColor = this.currentCutscene[0].character === 'Alex' ? '#000' :
+                       this.currentCutscene[0].text.includes('BAD') ? '#330000' :
+                       this.currentCutscene[0].text.includes('SECRET') ? '#0a2f0a' : '#000';
+        container.style.background = bgColor;
+    }
+    
+    showDialogue() {
+        if (!this.currentCutscene || this.dialogueIndex >= this.currentCutscene.length) {
+            this.endCutscene();
+            return;
+        }
+        
+        const dialogue = this.currentCutscene[this.dialogueIndex];
+        const container = document.getElementById('cutscene-container');
+        
+        // Clear previous
+        container.innerHTML = '';
+        
+        // Add cinematic bars
+        const topBar = document.createElement('div');
+        topBar.className = 'cinematic-bar top';
+        container.appendChild(topBar);
+        
+        const bottomBar = document.createElement('div');
+        bottomBar.className = 'cinematic-bar bottom';
+        container.appendChild(bottomBar);
+        
+        // Add dialogue box
+        const dialogueBox = document.createElement('div');
+        dialogueBox.id = 'cutscene-dialogue';
+        
+        const text = document.createElement('div');
+        text.id = 'cutscene-text';
+        text.textContent = dialogue.text;
+        
+        if (dialogue.character) {
+            const character = document.createElement('div');
+            character.id = 'cutscene-character';
+            character.textContent = dialogue.character;
+            dialogueBox.appendChild(character);
+        }
+        
+        const continueText = document.createElement('div');
+        continueText.id = 'cutscene-continue';
+        continueText.textContent = 'CLICK TO CONTINUE';
+        
+        dialogueBox.appendChild(text);
+        dialogueBox.appendChild(continueText);
+        container.appendChild(dialogueBox);
+        
+        // Auto-advance
+        if (this.timeout) clearTimeout(this.timeout);
+        this.timeout = setTimeout(() => {
+            this.advanceDialogue();
+        }, dialogue.delay * 1000);
+        
+        this.dialogueIndex++;
+    }
+    
+    advanceDialogue() {
+        if (this.timeout) clearTimeout(this.timeout);
+        this.showDialogue();
+    }
+    
+    endCutscene() {
+        console.log("Cutscene ending");
+        
+        this.isPlaying = false;
+        this.currentCutscene = null;
+        
+        // Hide container
+        const container = document.getElementById('cutscene-container');
+        if (container) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+        }
+        
+        // Call completion callback
+        if (this.onComplete) {
+            setTimeout(() => this.onComplete(), 100);
+        }
+    }
+}
+
+// ===============================
+// UI SYSTEM
+// ===============================
+class UISystem {
+    constructor() {
+        this.uiContainer = null;
+        this.notificationTimeout = null;
+    }
+    
+    init() {
+        this.createUI();
+    }
+    
+    createUI() {
+        // Create main UI container
+        this.uiContainer = document.getElementById('game-ui');
+        if (!this.uiContainer) {
+            this.uiContainer = document.createElement('div');
+            this.uiContainer.id = 'game-ui';
+            document.body.appendChild(this.uiContainer);
+        }
+        
+        this.uiContainer.innerHTML = `
+            <!-- Health -->
+            <div class="ui-health">
+                <div class="health-bar">
+                    <div class="health-fill" id="health-fill"></div>
+                    <div class="health-value" id="health-value">100</div>
+                </div>
+            </div>
+            
+            <!-- Stamina -->
+            <div class="ui-stamina">
+                <div class="stamina-bar">
+                    <div class="stamina-fill" id="stamina-fill"></div>
+                </div>
+            </div>
+            
+            <!-- Fear -->
+            <div class="ui-fear">
+                <div class="fear-bar">
+                    <div class="fear-fill" id="fear-fill"></div>
+                </div>
+            </div>
+            
+            <!-- Battery -->
+            <div class="ui-battery">
+                <span id="battery-icon">🔦</span>
+                <span class="battery-value" id="battery-value">100%</span>
+            </div>
+            
+            <!-- Time -->
+            <div class="ui-time">
+                <span id="time-icon">🕐</span>
+                <span id="time-text">0:00</span>
+            </div>
+            
+            <!-- Inventory -->
+            <div class="ui-inventory">
+                <div>Medkits: <span id="medkit-count">1</span></div>
+                <div>Batteries: <span id="battery-count">2</span></div>
+            </div>
+            
+            <!-- Objective -->
+            <div class="ui-objective">
+                <span class="objective-label">Objective:</span>
+                <span class="objective-text" id="objective-text">Find your way out</span>
+            </div>
+            
+            <!-- Notification -->
+            <div class="ui-notification" id="notification">
+                <span id="notification-text"></span>
+            </div>
+            
+            <!-- Crosshair -->
+            <div class="ui-crosshair">
+                <div class="crosshair-dot"></div>
+            </div>
+            
+            <!-- Interaction -->
+            <div class="ui-interaction" id="interaction">
+                <span id="interaction-text">Press E to interact</span>
+            </div>
+        `;
+        
+        // Create pause menu
+        this.createPauseMenu();
+    }
+    
+    createPauseMenu() {
+        const pauseMenu = document.createElement('div');
+        pauseMenu.id = 'pause-menu';
+        pauseMenu.innerHTML = `
+            <h1>PAUSED</h1>
+            <div class="pause-stats">
+                <p>Health: <span id="pause-health">100</span></p>
+                <p>Time: <span id="pause-time">0:00</span></p>
+            </div>
+            <button id="resume-btn">Resume</button>
+            <button id="menu-btn">Main Menu</button>
+        `;
+        
+        document.body.appendChild(pauseMenu);
+        
+        document.getElementById('resume-btn').addEventListener('click', () => {
+            window.game.togglePause();
+        });
+        
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            location.reload();
+        });
+    }
+    
+    show() {
+        this.uiContainer.style.display = 'block';
+    }
+    
+    hide() {
+        this.uiContainer.style.display = 'none';
+    }
+    
+    updateAll(player, gameTime) {
+        this.updateHealth(player.health);
+        this.updateStamina(player.stamina);
+        this.updateFear(player.fear);
+        this.updateBattery(player.battery);
+        this.updateTime(gameTime);
+    }
+    
+    updateHealth(health) {
+        const fill = document.getElementById('health-fill');
+        const value = document.getElementById('health-value');
+        const pauseHealth = document.getElementById('pause-health');
+        
+        if (fill) fill.style.width = `${health}%`;
+        if (value) value.textContent = Math.round(health);
+        if (pauseHealth) pauseHealth.textContent = Math.round(health);
+        
+        // Color based on health
+        if (fill) {
+            if (health > 70) {
+                fill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+            } else if (health > 40) {
+                fill.style.background = 'linear-gradient(90deg, #ff9800, #ffb74d)';
+            } else {
+                fill.style.background = 'linear-gradient(90deg, #f44336, #ef5350)';
+            }
+        }
+    }
+    
+    updateStamina(stamina) {
+        const fill = document.getElementById('stamina-fill');
+        if (fill) {
+            fill.style.width = `${stamina}%`;
+            fill.style.background = stamina > 30 ? 
+                'linear-gradient(90deg, #ffaa00, #ffcc44)' :
+                'linear-gradient(90deg, #f57c00, #ff9800)';
+        }
+    }
+    
+    updateFear(fear) {
+        const fill = document.getElementById('fear-fill');
+        if (fill) {
+            fill.style.width = `${fear}%`;
+            fill.style.background = fear > 70 ?
+                'linear-gradient(90deg, #d32f2f, #f44336)' :
+                'linear-gradient(90deg, #aa44ff, #e040fb)';
+        }
+    }
+    
+    updateBattery(battery) {
+        const value = document.getElementById('battery-value');
+        const icon = document.getElementById('battery-icon');
+        
+        if (value) value.textContent = `${Math.round(battery)}%`;
+        if (icon) {
+            icon.textContent = battery > 20 ? '🔦' : '🕯️';
+            icon.style.color = battery > 20 ? '#44aaff' : '#ff4444';
+        }
+    }
+    
+    updateTime(gameTime) {
+        const text = document.getElementById('time-text');
+        const pauseTime = document.getElementById('pause-time');
+        
+        const minutes = Math.floor(gameTime / 60);
+        const seconds = Math.floor(gameTime % 60);
+        const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (text) text.textContent = timeStr;
+        if (pauseTime) pauseTime.textContent = timeStr;
+    }
+    
+    showNotification(text, duration = 3000) {
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
+        
+        if (!notification || !notificationText) return;
+        
+        notificationText.textContent = text;
+        notification.classList.add('show');
+        
+        if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+        this.notificationTimeout = setTimeout(() => {
+            notification.classList.remove('show');
+        }, duration);
+    }
+    
+    showDamageFlash() {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,0,0,0.3);
+            pointer-events: none;
+            z-index: 99;
+            animation: fadeOut 0.3s forwards;
+        `;
+        
+        document.body.appendChild(flash);
+        
+        setTimeout(() => {
+            document.body.removeChild(flash);
+        }, 300);
+    }
+    
+    togglePauseMenu(show) {
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) {
+            pauseMenu.style.display = show ? 'flex' : 'none';
+        }
+    }
+}
+
+// Add fadeOut animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// Make game accessible globally
+window.game = null;
+window.addEventListener('DOMContentLoaded', () => {
+    window.game = new Game();
+    window.game.init();
+});
