@@ -1,2215 +1,1062 @@
 /* =========================================================
-   EARS OF THE FOREST
-   PART 1 / 20
-   CORE SETUP (VISIBLE, DAYTIME, NOT GRAY)
+   EARS OF THE FOREST - COMPLETE WORKING VERSION
 ========================================================= */
 
 // ===============================
-// BASIC VARIABLES
+// CORE VARIABLES
 // ===============================
-let scene, camera, renderer, clock;
-let player = { health: 100 };
-
-// ===============================
-// SCENE
-// ===============================
-scene = new THREE.Scene();
-
-// DAYTIME SKY COLOR (NOT DARK, NOT GRAY)
-scene.background = new THREE.Color(0x9bb0b5);
-
-// LIGHT GRAY TRANSLUCENT FOG (DAYTIME)
-scene.fog = new THREE.Fog(
-  0x9bb0b5, // fog color
-  25,       // near
-  200       // far
-);
-
-// ===============================
-// CAMERA
-// ===============================
-camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-
-// CAMERA HEIGHT = HUMAN EYES
-camera.position.set(0, 1.7, 5);
-camera.lookAt(0, 1.7, 0);
-
-// ===============================
-// RENDERER
-// ===============================
-renderer = new THREE.WebGLRenderer({
-  antialias: true
-});
-
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-
-// ENABLE SHADOWS
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-// ATTACH CANVAS
-document.body.appendChild(renderer.domElement);
-
-// ===============================
-// CLOCK
-// ===============================
-clock = new THREE.Clock();
-
-// ===============================
-// LIGHTING (DAYTIME FOREST)
-// ===============================
-
-// SUN LIGHT
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-sunLight.position.set(100, 200, 100);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-scene.add(sunLight);
-
-// SOFT SKY LIGHT
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
-scene.add(ambientLight);
-
-// ===============================
-// GROUND (VISIBLE & REALISTIC)
-// ===============================
-const groundGeometry = new THREE.PlaneGeometry(
-  500,
-  500,
-  64,
-  64
-);
-
-const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4f6b4f,   // forest green
-  roughness: 1
-});
-
-const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-// ===============================
-// DEBUG OBJECT (MUST SEE THIS)
-// ===============================
-const debugCube = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshStandardMaterial({ color: 0xff0000 })
-);
-debugCube.position.set(0, 1, -5);
-debugCube.castShadow = true;
-scene.add(debugCube);
-
-// ===============================
-// BASIC RENDER LOOP (TEMP)
-// ===============================
-function animate() {
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
-}
-animate();
-
-// ===============================
-// RESIZE FIX
-// ===============================
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// ===============================
-// CONFIRM LOAD
-// ===============================
-console.log("PART 1 LOADED: Scene visible, daytime, ground rendered");
-
-/* =========================================================
-   PART 2 / 20
-   FIRST PERSON CONTROLS + MOVEMENT
-========================================================= */
-
-// ===============================
-// POINTER LOCK CONTROLS
-// ===============================
-const controls = new THREE.PointerLockControls(camera, document.body);
-scene.add(controls.getObject());
-
-// lock mouse on ANY click (no message, no blocker)
-document.addEventListener("click", () => {
-  if (!controls.isLocked) {
-    controls.lock();
-  }
-});
-
-// ===============================
-// MOVEMENT STATE
-// ===============================
-let moveForward = false;
-let moveBackward = false;
-let moveLeft = false;
-let moveRight = false;
-let sprinting = false;
-
+let scene, camera, renderer, clock, controls;
+let player = { 
+    health: 100, 
+    battery: 100,
+    maxBattery: 100
+};
+let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+let sprinting = false, canJump = false;
 let velocity = new THREE.Vector3();
 let direction = new THREE.Vector3();
-
-// ===============================
-// PLAYER STATS
-// ===============================
 let stamina = 100;
 const maxStamina = 100;
-
-// ===============================
-// KEY INPUT
-// ===============================
-document.addEventListener("keydown", (event) => {
-  switch (event.code) {
-    case "KeyW": moveForward = true; break;
-    case "KeyS": moveBackward = true; break;
-    case "KeyA": moveLeft = true; break;
-    case "KeyD": moveRight = true; break;
-    case "ShiftLeft": sprinting = true; break;
-  }
-});
-
-document.addEventListener("keyup", (event) => {
-  switch (event.code) {
-    case "KeyW": moveForward = false; break;
-    case "KeyS": moveBackward = false; break;
-    case "KeyA": moveLeft = false; break;
-    case "KeyD": moveRight = false; break;
-    case "ShiftLeft": sprinting = false; break;
-  }
-});
-
-// ===============================
-// MOVEMENT UPDATE FUNCTION
-// ===============================
-function updatePlayerMovement(delta) {
-
-  // friction
-  velocity.x -= velocity.x * 10.0 * delta;
-  velocity.z -= velocity.z * 10.0 * delta;
-
-  direction.z = Number(moveForward) - Number(moveBackward);
-  direction.x = Number(moveRight) - Number(moveLeft);
-  direction.normalize();
-
-  let speed = 8;
-
-  // sprint logic
-  if (sprinting && stamina > 0) {
-    speed = 14;
-    stamina -= 35 * delta;
-  } else {
-    stamina += 20 * delta;
-  }
-
-  stamina = THREE.MathUtils.clamp(stamina, 0, maxStamina);
-
-  if (moveForward || moveBackward)
-    velocity.z -= direction.z * speed * delta;
-
-  if (moveLeft || moveRight)
-    velocity.x -= direction.x * speed * delta;
-
-  controls.moveRight(-velocity.x * delta);
-  controls.moveForward(-velocity.z * delta);
-
-  // keep player above ground
-  controls.getObject().position.y = 1.7;
-}
-
-// ===============================
-// STAMINA HUD UPDATE
-// ===============================
-const staminaDiv = document.getElementById("stamina");
-
-function updateStaminaHUD() {
-  staminaDiv.textContent = "Stamina: " + Math.round(stamina);
-}
-
-// ===============================
-// INTEGRATE INTO MAIN LOOP
-// ===============================
-// Replace the animate() function from Part 1
-// with THIS version:
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  const delta = clock.getDelta();
-
-  if (controls.isLocked) {
-    updatePlayerMovement(delta);
-    updateStaminaHUD();
-  }
-
-  renderer.render(scene, camera);
-}
-
-// restart loop safely
-renderer.setAnimationLoop(null);
-animate();
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 2 LOADED: FPS movement & pointer lock active");
-/* =========================================================
-   PART 3 / 20
-   PROCEDURAL FOREST + TERRAIN + CAVE
-========================================================= */
-
-// ===============================
-// REMOVE DEBUG CUBE (SAFETY)
-// ===============================
-scene.children.forEach(obj=>{
-  if(obj.geometry && obj.geometry.type==="BoxGeometry"){
-    scene.remove(obj);
-  }
-});
-
-// ===============================
-// TERRAIN HEIGHT VARIATION
-// ===============================
-const groundPos = ground.geometry.attributes.position;
-for (let i = 0; i < groundPos.count; i++) {
-  const x = groundPos.getX(i);
-  const z = groundPos.getZ(i);
-
-  // rolling hills (gentle)
-  const height =
-    Math.sin(x * 0.03) * 1.5 +
-    Math.cos(z * 0.03) * 1.5 +
-    Math.random() * 0.5;
-
-  groundPos.setY(i, height);
-}
-ground.geometry.computeVertexNormals();
-ground.geometry.attributes.position.needsUpdate = true;
-
-// ===============================
-// FOREST MATERIALS
-// ===============================
-const treeTrunkMat = new THREE.MeshStandardMaterial({
-  color: 0x4a2e1f,
-  roughness: 1
-});
-
-const treeLeafMat = new THREE.MeshStandardMaterial({
-  color: 0x2f5f2f,
-  roughness: 0.9
-});
-
-// ===============================
-// PROCEDURAL TREE FUNCTION
-// ===============================
-function createTree(x, z) {
-  const trunkHeight = 4 + Math.random() * 3;
-
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.3, 0.5, trunkHeight, 6),
-    treeTrunkMat
-  );
-
-  const leaves = new THREE.Mesh(
-    new THREE.ConeGeometry(2.5, 6, 8),
-    treeLeafMat
-  );
-
-  trunk.position.set(x, trunkHeight / 2, z);
-  leaves.position.set(x, trunkHeight + 3, z);
-
-  trunk.castShadow = true;
-  leaves.castShadow = true;
-
-  scene.add(trunk);
-  scene.add(leaves);
-
-  trees.push({ trunk, leaves });
-}
-
-// ===============================
-// SPAWN FOREST
-// ===============================
-const trees = [];
-
-for (let i = 0; i < 200; i++) {
-  const x = (Math.random() - 0.5) * 400;
-  const z = (Math.random() - 0.5) * 400;
-
-  // keep center area clearer
-  if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
-
-  createTree(x, z);
-}
-
-// ===============================
-// PATH GENERATION
-// ===============================
-const pathMat = new THREE.MeshStandardMaterial({
-  color: 0x6b5a3a,
-  roughness: 1
-});
-
-const path = new THREE.Mesh(
-  new THREE.PlaneGeometry(12, 300),
-  pathMat
-);
-path.rotation.x = -Math.PI / 2;
-path.position.y = 0.02;
-scene.add(path);
-
-// ===============================
-// LANDMARK ROCKS
-// ===============================
-const rockMat = new THREE.MeshStandardMaterial({
-  color: 0x555555,
-  roughness: 1
-});
-
-for (let i = 0; i < 30; i++) {
-  const rock = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(1 + Math.random() * 2),
-    rockMat
-  );
-  rock.position.set(
-    (Math.random() - 0.5) * 300,
-    0.5,
-    (Math.random() - 0.5) * 300
-  );
-  rock.rotation.set(
-    Math.random(),
-    Math.random(),
-    Math.random()
-  );
-  rock.castShadow = true;
-  scene.add(rock);
-}
-
-// ===============================
-// CAVE ENTRANCE
-// ===============================
-const caveMat = new THREE.MeshStandardMaterial({
-  color: 0x333333,
-  roughness: 1
-});
-
-const caveEntrance = new THREE.Mesh(
-  new THREE.TorusGeometry(6, 2.5, 12, 16),
-  caveMat
-);
-caveEntrance.rotation.x = Math.PI / 2;
-caveEntrance.position.set(60, 3, 60);
-caveEntrance.castShadow = true;
-scene.add(caveEntrance);
-
-// dark cave interior
-const caveTunnel = new THREE.Mesh(
-  new THREE.CylinderGeometry(6, 6, 40, 16, 1, true),
-  new THREE.MeshStandardMaterial({
-    color: 0x222222,
-    side: THREE.BackSide
-  })
-);
-caveTunnel.rotation.x = Math.PI / 2;
-caveTunnel.position.set(60, 3, 80);
-scene.add(caveTunnel);
-
-// ===============================
-// CAVE TRIGGER ZONE
-// ===============================
-let inCave = false;
-
-function checkCaveEntry() {
-  const pos = controls.getObject().position;
-  const dist = pos.distanceTo(new THREE.Vector3(60, 1.7, 60));
-
-  if (dist < 8 && !inCave) {
-    inCave = true;
-    scene.fog.near = 5;
-    scene.fog.far = 40;
-    ambientLight.intensity = 0.2;
-    console.log("Entered cave");
-  }
-
-  if (dist > 10 && inCave) {
-    inCave = false;
-    scene.fog.near = 25;
-    scene.fog.far = 200;
-    ambientLight.intensity = 0.45;
-    console.log("Exited cave");
-  }
-}
-
-// ===============================
-// INTEGRATE INTO LOOP
-// ===============================
-// Add this call inside animate():
-//
-// checkCaveEntry();
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 3 LOADED: Forest, terrain, path, cave visible");
-/* =========================================================
-   PART 4 / 20
-   WOLVES + AI (NO MODELS)
-========================================================= */
-
-// ===============================
-// WOLF MATERIALS
-// ===============================
-const wolfBodyMat = new THREE.MeshStandardMaterial({
-  color: 0x2b2b2b,
-  roughness: 1
-});
-
-const wolfEyeMat = new THREE.MeshStandardMaterial({
-  color: 0xff0000,
-  emissive: 0xff0000,
-  emissiveIntensity: 0.6
-});
-
-// ===============================
-// WOLF CLASS
-// ===============================
-class Wolf {
-  constructor(x, z, isBoss = false) {
-    this.group = new THREE.Group();
-
-    // body
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.6, 1.6, 4, 8),
-      wolfBodyMat
-    );
-    body.rotation.z = Math.PI / 2;
-    body.castShadow = true;
-
-    // head
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.45, 8, 8),
-      wolfBodyMat
-    );
-    head.position.set(1.2, 0.3, 0);
-    head.castShadow = true;
-
-    // eyes
-    const eyeL = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07),
-      wolfEyeMat
-    );
-    eyeL.position.set(1.45, 0.4, 0.2);
-
-    const eyeR = eyeL.clone();
-    eyeR.position.z = -0.2;
-
-    head.add(eyeL);
-    head.add(eyeR);
-
-    this.group.add(body);
-    this.group.add(head);
-
-    this.group.position.set(x, 0.6, z);
-    this.group.scale.set(isBoss ? 1.6 : 1, isBoss ? 1.6 : 1, isBoss ? 1.6 : 1);
-
-    scene.add(this.group);
-
-    // AI
-    this.state = "idle"; // idle, stalk, circle, chase
-    this.speed = isBoss ? 6 : 4;
-    this.attackCooldown = 0;
-    this.isBoss = isBoss;
-    this.circleAngle = Math.random() * Math.PI * 2;
-  }
-
-  update(delta) {
-    const playerPos = controls.getObject().position;
-    const dist = this.group.position.distanceTo(playerPos);
-
-    // AI STATE LOGIC
-    if (this.state === "idle" && dist < 40) {
-      this.state = "stalk";
-    }
-
-    if (this.state === "stalk" && dist < 25) {
-      this.state = "circle";
-    }
-
-    if (this.state === "circle" && dist < 15) {
-      this.state = "chase";
-    }
-
-    // MOVEMENT
-    if (this.state === "stalk") {
-      this.lookAtPlayer(playerPos);
-      this.group.position.add(
-        this.directionTo(playerPos).multiplyScalar(delta * 1.2)
-      );
-    }
-
-    if (this.state === "circle") {
-      this.circleAngle += delta;
-      this.lookAtPlayer(playerPos);
-      this.group.position.x += Math.cos(this.circleAngle) * delta * 2;
-      this.group.position.z += Math.sin(this.circleAngle) * delta * 2;
-    }
-
-    if (this.state === "chase") {
-      this.lookAtPlayer(playerPos);
-      this.group.position.add(
-        this.directionTo(playerPos).multiplyScalar(delta * this.speed)
-      );
-
-      // ATTACK
-      if (dist < 1.8 && this.attackCooldown <= 0) {
-        player.health -= this.isBoss ? 25 : 10;
-        fear += 12;
-        this.attackCooldown = 1.2;
-      }
-    }
-
-    this.attackCooldown -= delta;
-  }
-
-  directionTo(target) {
-    return new THREE.Vector3()
-      .subVectors(target, this.group.position)
-      .normalize();
-  }
-
-  lookAtPlayer(target) {
-    this.group.lookAt(target.x, this.group.position.y, target.z);
-  }
-}
-
-// ===============================
-// WOLF SPAWNING
-// ===============================
-const wolves = [];
-
-// TIMED EVENTS
-let gameTime = 0;
-let wave3 = false;
-let wave5 = false;
-let wave10 = false;
-
-function spawnWolfRing(count, radius) {
-  const p = controls.getObject().position;
-  for (let i = 0; i < count; i++) {
-    const angle = (i / count) * Math.PI * 2;
-    const x = p.x + Math.cos(angle) * radius;
-    const z = p.z + Math.sin(angle) * radius;
-    wolves.push(new Wolf(x, z));
-  }
-}
-
-// ===============================
-// UPDATE WOLVES
-// ===============================
-function updateWolves(delta) {
-  gameTime += delta;
-
-  if (gameTime > 180 && !wave3) {
-    spawnWolfRing(1, 30);
-    wave3 = true;
-  }
-
-  if (gameTime > 300 && !wave5) {
-    spawnWolfRing(3, 20);
-    wave5 = true;
-  }
-
-  if (gameTime > 600 && !wave10) {
-    spawnWolfRing(8, 35);
-    wave10 = true;
-  }
-
-  wolves.forEach(w => w.update(delta));
-}
-
-// ===============================
-// BOSS WOLF (CAVE ONLY)
-// ===============================
-const bossWolf = new Wolf(60, 90, true);
-bossWolf.state = "idle";
-
-function updateBoss(delta) {
-  const playerPos = controls.getObject().position;
-  const dist = bossWolf.group.position.distanceTo(playerPos);
-
-  if (inCave && dist < 35) {
-    bossWolf.state = "chase";
-    bossWolf.update(delta);
-  }
-}
-
-// ===============================
-// HEALTH HUD UPDATE
-// ===============================
-function updateHealthHUD() {
-  document.getElementById("health").textContent =
-    "Health: " + Math.max(0, Math.round(player.health));
-}
-
-// ===============================
-// INTEGRATE INTO MAIN LOOP
-// ===============================
-// Add inside animate():
-//
-// updateWolves(delta);
-// updateBoss(delta);
-// updateHealthHUD();
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 4 LOADED: Wolves stalking, circling, chasing");
-/* =========================================================
-   PART 5 / 20
-   FLASHLIGHT + INVENTORY + AUDIO
-========================================================= */
-
-// ===============================
-// PLAYER STATS EXTENSION
-// ===============================
-player.battery = 100;
-player.maxBattery = 100;
-player.hasFlashlight = true;
-
-// ===============================
-// FLASHLIGHT LIGHT
-// ===============================
-const flashlight = new THREE.SpotLight(
-  0xffffff,
-  3,
-  35,
-  Math.PI / 6,
-  0.4,
-  1
-);
-flashlight.castShadow = true;
-flashlight.visible = true;
-
-scene.add(flashlight);
-scene.add(flashlight.target);
-
-// ===============================
-// FLASHLIGHT FOLLOW CAMERA
-// ===============================
-function updateFlashlight() {
-  if (!player.hasFlashlight) return;
-
-  flashlight.position.copy(camera.position);
-  const dir = new THREE.Vector3();
-  camera.getWorldDirection(dir);
-  flashlight.target.position.copy(
-    camera.position.clone().add(dir.multiplyScalar(10))
-  );
-}
-
-// ===============================
-// BATTERY DRAIN
-// ===============================
-let flashlightOn = true;
-
-function updateBattery(delta) {
-  if (!flashlightOn) return;
-
-  player.battery -= delta * 2;
-  if (player.battery <= 0) {
-    player.battery = 0;
-    flashlight.visible = false;
-    flashlightOn = false;
-  }
-}
-
-// ===============================
-// FLASHLIGHT TOGGLE (F)
-// ===============================
-window.addEventListener("keydown", e => {
-  if (e.code === "KeyF" && player.battery > 0) {
-    flashlightOn = !flashlightOn;
-    flashlight.visible = flashlightOn;
-  }
-});
-
-// ===============================
-// INVENTORY
-// ===============================
-const inventory = {
-  medkits: 1,
-  batteries: 2
-};
-
-// ===============================
-// USE ITEMS
-// ===============================
-window.addEventListener("keydown", e => {
-  // Use medkit (H)
-  if (e.code === "KeyH" && inventory.medkits > 0) {
-    player.health = Math.min(100, player.health + 40);
-    inventory.medkits--;
-  }
-
-  // Replace battery (B)
-  if (e.code === "KeyB" && inventory.batteries > 0) {
-    player.battery = player.maxBattery;
-    flashlight.visible = true;
-    flashlightOn = true;
-    inventory.batteries--;
-  }
-});
-
-// ===============================
-// HUD UPDATE
-// ===============================
-function updateHUD() {
-  document.getElementById("health").textContent =
-    "Health: " + Math.round(player.health);
-
-  document.getElementById("battery").textContent =
-    "Battery: " + Math.round(player.battery) + "%";
-
-  document.getElementById("fear").textContent =
-    "Fear: " + Math.round(fear);
-
-  document.getElementById("inventory").textContent =
-    `Medkits: ${inventory.medkits} | Batteries: ${inventory.batteries}`;
-}
-
-// ===============================
-// AUDIO SETUP (NO FILES YET)
-// ===============================
-const listener = new THREE.AudioListener();
-camera.add(listener);
-
-const ambientSound = new THREE.Audio(listener);
-const heartbeatSound = new THREE.Audio(listener);
-
-// placeholders (you will add real files later)
-ambientSound.setVolume(0.4);
-heartbeatSound.setVolume(0.6);
-
-// ===============================
-// AUDIO LOGIC
-// ===============================
-function updateAudio() {
-  if (fear > 40 && !heartbeatSound.isPlaying) {
-    // heartbeatSound.play();
-  }
-
-  if (fear < 30 && heartbeatSound.isPlaying) {
-    // heartbeatSound.stop();
-  }
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateFlashlight();
-// updateBattery(delta);
-// updateHUD();
-// updateAudio();
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 5 LOADED: Flashlight, battery, inventory, audio");
-/* =========================================================
-   PART 6 / 20
-   TERRAIN DEPTH + DYNAMIC FOG + FEAR SYSTEM
-========================================================= */
-
-// ===============================
-// FEAR SYSTEM
-// ===============================
 let fear = 5;
 let maxFear = 100;
-
-function updateFear(delta) {
-  // Natural fear increase over time
-  fear += delta * 0.5;
-
-  // Darkness increases fear
-  if (!flashlightOn) fear += delta * 3;
-
-  // Low health increases fear
-  if (player.health < 40) fear += delta * 2;
-
-  fear = Math.min(maxFear, fear);
-}
-
-// ===============================
-// FOG THAT BREATHES (VISIBLE DAYTIME)
-// ===============================
-scene.fog.color.setHex(0xcccccc); // light gray daytime fog
-scene.fog.density = 0.015;
-
-let fogPulse = 0;
-
-function updateFog(delta) {
-  fogPulse += delta;
-
-  // Fog intensity reacts to fear
-  scene.fog.density =
-    0.012 + Math.sin(fogPulse) * 0.002 + fear * 0.00008;
-}
-
-// ===============================
-// TERRAIN HEIGHT VARIATION
-// ===============================
-ground.geometry.dispose();
-
-const terrainGeo = new THREE.PlaneGeometry(300, 300, 120, 120);
-terrainGeo.rotateX(-Math.PI / 2);
-
-for (let i = 0; i < terrainGeo.attributes.position.count; i++) {
-  const y =
-    Math.sin(i * 0.15) * 0.8 +
-    Math.cos(i * 0.08) * 1.2 +
-    Math.random() * 0.5;
-  terrainGeo.attributes.position.setY(i, y);
-}
-
-terrainGeo.computeVertexNormals();
-ground.geometry = terrainGeo;
-
-// ===============================
-// TERRAIN COLOR VARIATION
-// ===============================
-ground.material = new THREE.MeshStandardMaterial({
-  color: 0x4b5a46,
-  roughness: 1,
-  metalness: 0
-});
-
-// ===============================
-// ENVIRONMENT OBJECTS (TREES / ROCKS)
-// ===============================
-const envObjects = [];
-
-function createTree(x, z) {
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.3, 0.5, 6),
-    new THREE.MeshStandardMaterial({ color: 0x3b2a1a })
-  );
-
-  const leaves = new THREE.Mesh(
-    new THREE.SphereGeometry(2.5, 12, 12),
-    new THREE.MeshStandardMaterial({ color: 0x2e4b2e })
-  );
-
-  trunk.position.set(x, 3, z);
-  leaves.position.set(x, 7, z);
-
-  trunk.castShadow = leaves.castShadow = true;
-
-  scene.add(trunk, leaves);
-  envObjects.push(trunk, leaves);
-}
-
-function createRock(x, z) {
-  const rock = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(1.5),
-    new THREE.MeshStandardMaterial({ color: 0x666666 })
-  );
-  rock.position.set(x, 0.7, z);
-  rock.castShadow = true;
-  scene.add(rock);
-  envObjects.push(rock);
-}
-
-// Scatter environment
-for (let i = 0; i < 60; i++) {
-  createTree(
-    (Math.random() - 0.5) * 200,
-    (Math.random() - 0.5) * 200
-  );
-}
-
-for (let i = 0; i < 40; i++) {
-  createRock(
-    (Math.random() - 0.5) * 180,
-    (Math.random() - 0.5) * 180
-  );
-}
-
-// ===============================
-// PLAYER FOOTSTEP FEEDBACK
-// ===============================
-let stepTimer = 0;
-
-function updateFootsteps(delta) {
-  stepTimer += delta;
-
-  if (controls.isLocked && stepTimer > 0.5) {
-    stepTimer = 0;
-    fear += 0.2; // paranoia effect
-  }
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateFear(delta);
-// updateFog(delta);
-// updateFootsteps(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 6 LOADED: Terrain, fog, fear, environment");
-/* =========================================================
-   PART 7 / 20
-   CAVE SYSTEM (ENTERABLE, FEAR-BASED)
-========================================================= */
-
-// ===============================
-// CAVE DATA
-// ===============================
-const caves = [];
+let gameTime = 0;
+let wolves = [];
+let obstacles = [];
+let flashlightOn = true;
+let flashlightBattery = 100;
 let insideCave = false;
-
-// ===============================
-// CREATE CAVE ENTRANCE
-// ===============================
-function createCave(x, z) {
-  const entrance = new THREE.Mesh(
-    new THREE.CylinderGeometry(4, 6, 5, 16),
-    new THREE.MeshStandardMaterial({
-      color: 0x2e2e2e,
-      roughness: 1
-    })
-  );
-
-  entrance.position.set(x, 2.5, z);
-  entrance.castShadow = true;
-  entrance.receiveShadow = true;
-  scene.add(entrance);
-
-  // Inner cave walls
-  const caveInterior = new THREE.Mesh(
-    new THREE.SphereGeometry(18, 24, 24),
-    new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a,
-      side: THREE.BackSide
-    })
-  );
-
-  caveInterior.position.set(x, -10, z);
-  caveInterior.visible = false;
-  scene.add(caveInterior);
-
-  caves.push({
-    entrance,
-    interior: caveInterior,
-    x,
-    z
-  });
-}
-
-// ===============================
-// SCATTER CAVES
-// ===============================
-createCave(30, 40);
-createCave(-50, -20);
-createCave(60, -60);
-
-// ===============================
-// CAVE LIGHT
-// ===============================
-const caveLight = new THREE.PointLight(0xffffff, 0.8, 40);
-caveLight.castShadow = true;
-scene.add(caveLight);
-
-// ===============================
-// CHECK ENTER / EXIT CAVE
-// ===============================
-function updateCaves(delta) {
-  let entered = false;
-
-  caves.forEach(cave => {
-    const dist = camera.position.distanceTo(
-      new THREE.Vector3(cave.x, 0, cave.z)
-    );
-
-    // ENTER CAVE
-    if (dist < 5) {
-      entered = true;
-
-      if (!insideCave) {
-        insideCave = true;
-        cave.interior.visible = true;
-
-        // Move camera slightly down
-        camera.position.y = 1.2;
-
-        // Fog becomes thicker + darker
-        scene.fog.color.setHex(0x999999);
-        scene.fog.density = 0.04;
-
-        fear += 15;
-      }
-
-      caveLight.position.set(
-        cave.x,
-        camera.position.y + 2,
-        cave.z
-      );
-    }
-  });
-
-  // EXIT CAVE
-  if (!entered && insideCave) {
-    insideCave = false;
-
-    caves.forEach(c => (c.interior.visible = false));
-
-    camera.position.y = 1.6;
-
-    scene.fog.color.setHex(0xcccccc);
-    scene.fog.density = 0.015;
-  }
-}
-
-// ===============================
-// CAVE FEAR EFFECT
-// ===============================
-function updateCaveFear(delta) {
-  if (insideCave) {
-    fear += delta * 6;
-
-    // subtle camera shake
-    camera.rotation.z = Math.sin(performance.now() * 0.002) * 0.002;
-  }
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateCaves(delta);
-// updateCaveFear(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 7 LOADED: Caves active");
-/* =========================================================
-   PART 8 / 20
-   CLASSMATE AI (PROCEDURAL, FEAR-BASED)
-========================================================= */
-
-// ===============================
-// CLASSMATE SYSTEM
-// ===============================
-const classmates = [];
-let missingClassmate = false;
-
-// ===============================
-// SIMPLE HUMAN GENERATOR
-// ===============================
-function createHuman(color = 0x7777ff) {
-  const group = new THREE.Group();
-
-  // Body
-  const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.25, 0.8, 4, 8),
-    new THREE.MeshStandardMaterial({ color })
-  );
-  body.castShadow = true;
-  group.add(body);
-
-  // Head
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 12, 12),
-    new THREE.MeshStandardMaterial({ color: 0xffccaa })
-  );
-  head.position.y = 0.7;
-  head.castShadow = true;
-  group.add(head);
-
-  // Legs
-  for (let i = -1; i <= 1; i += 2) {
-    const leg = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08, 0.08, 0.6),
-      new THREE.MeshStandardMaterial({ color: 0x333333 })
-    );
-    leg.position.set(0.12 * i, -0.6, 0);
-    group.add(leg);
-  }
-
-  return group;
-}
-
-// ===============================
-// CLASSMATE CLASS
-// ===============================
-class Classmate {
-  constructor(name, x, z, color) {
-    this.name = name;
-    this.mesh = createHuman(color);
-    this.mesh.position.set(x, 0.9, z);
-    this.speed = 1.4;
-    this.fear = 0;
-    this.state = "follow"; // follow, panic, frozen, missing
-    this.lastDialogue = 0;
-
-    scene.add(this.mesh);
-    classmates.push(this);
-  }
-
-  speak(text) {
-    showDialogue(`${this.name}: ${text}`);
-  }
-
-  update(delta) {
-    if (this.state === "missing") return;
-
-    const dist = this.mesh.position.distanceTo(camera.position);
-
-    // Follow player
-    if (this.state === "follow" && dist > 2) {
-      const dir = new THREE.Vector3()
-        .subVectors(camera.position, this.mesh.position)
-        .normalize();
-      this.mesh.position.add(dir.multiplyScalar(this.speed * delta));
-    }
-
-    // Fear buildup
-    this.fear += fear * delta * 0.02;
-
-    // Panic
-    if (this.fear > 40 && this.state === "follow") {
-      this.state = "panic";
-      this.speak("I don’t like this place…");
-    }
-
-    // Panic movement
-    if (this.state === "panic") {
-      this.mesh.position.x += Math.sin(performance.now() * 0.002) * delta;
-      this.mesh.position.z += Math.cos(performance.now() * 0.002) * delta;
-    }
-
-    // Frozen
-    if (this.fear > 70 && this.state !== "missing") {
-      this.state = "frozen";
-      this.speak("I can’t move…");
-    }
-
-    // Disappearance (story event)
-    if (!missingClassmate && gameTime > 240 && this.name === "Jamie") {
-      this.state = "missing";
-      scene.remove(this.mesh);
-      missingClassmate = true;
-      showDialogue("Jamie is gone…");
-      storyFlags.classmateLost = true;
-    }
-  }
-}
-
-// ===============================
-// SPAWN CLASSMATES
-// ===============================
-new Classmate("Alex", -2, -3, 0x6699ff);
-new Classmate("Jamie", 2, -4, 0xff6666);
-new Classmate("Chris", 0, 3, 0x66ff99);
-
-// ===============================
-// DIALOGUE UI
-// ===============================
-const dialogueBox = document.getElementById("dialogue");
+let cutsceneActive = true; // Start with cutscene
+let fogPulse = 0;
+let stepTimer = 0;
 let dialogueTimer = 0;
-
-function showDialogue(text) {
-  dialogueBox.innerText = text;
-  dialogueBox.style.display = "block";
-  dialogueTimer = 3;
-}
-
-function updateDialogue(delta) {
-  if (dialogueTimer > 0) {
-    dialogueTimer -= delta;
-    if (dialogueTimer <= 0) {
-      dialogueBox.style.display = "none";
-    }
-  }
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// classmates.forEach(c => c.update(delta));
-// updateDialogue(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 8 LOADED: Classmates active");
-/* =========================================================
-   PART 9 / 20
-   WOLVES TIMED EVENTS + AI STATES
-========================================================= */
-
-// ===============================
-// WOLF SPAWN CONFIG
-// ===============================
-const wolfTimers = {
-  threeMin: false,
-  fiveMin: false,
-  tenMin: false
-};
-
-function spawnWolf(x, z, isBoss = false) {
-  const wolf = new Wolf(x, z, isBoss);
-  wolves.push(wolf);
-  return wolf;
-}
-
-// ===============================
-// TIMED EVENTS
-// ===============================
-function updateTimedWolves(delta) {
-  // track gameTime from previous parts
-  if (gameTime > 180 && !wolfTimers.threeMin) {
-    spawnWolf(
-      camera.position.x + 15,
-      camera.position.z + 10
-    );
-    wolfTimers.threeMin = true;
-    showDialogue("A wolf is nearby...");
-  }
-
-  if (gameTime > 300 && !wolfTimers.fiveMin) {
-    for (let i = 0; i < 3; i++) {
-      spawnWolf(
-        camera.position.x + (Math.random() - 0.5) * 20,
-        camera.position.z + (Math.random() - 0.5) * 20
-      );
-    }
-    wolfTimers.fiveMin = true;
-    showDialogue("Wolves surround you!");
-  }
-
-  if (gameTime > 600 && !wolfTimers.tenMin) {
-    for (let i = 0; i < 10; i++) {
-      spawnWolf(
-        camera.position.x + (Math.random() - 0.5) * 50,
-        camera.position.z + (Math.random() - 0.5) * 50
-      );
-    }
-    wolfTimers.tenMin = true;
-    showDialogue("A horde of wolves is chasing!");
-  }
-}
-
-// ===============================
-// WOLF AI STATE UPDATES
-// ===============================
-function updateWolfAI(delta) {
-  wolves.forEach(w => {
-    w.update(delta);
-
-    // fear triggers wolf retreat (for realism)
-    if (fear > 80 && Math.random() < 0.01) {
-      w.state = "idle";
-    }
-  });
-
-  // Boss wolf only triggers in cave
-  updateBoss(delta);
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateTimedWolves(delta);
-// updateWolfAI(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 9 LOADED: Wolves AI and timed attacks ready");
-/* =========================================================
-   PART 10 / 20
-   DAMAGE & FEAR VISUALS + AUDIO CUES
-========================================================= */
-
-// ===============================
-// SCREEN OVERLAY EFFECTS
-// ===============================
-const overlay = document.createElement("div");
-overlay.style.position = "fixed";
-overlay.style.inset = 0;
-overlay.style.backgroundColor = "red";
-overlay.style.opacity = "0";
-overlay.style.pointerEvents = "none";
-overlay.style.zIndex = "1000";
-document.body.appendChild(overlay);
-
-// ===============================
-// FEAR/HEALTH EFFECTS
-// ===============================
-function updateScreenEffects(delta) {
-  // Health damage flash
-  if (player.health < 100) {
-    overlay.style.opacity = Math.min(0.6, (100 - player.health) / 80);
-  } else {
-    overlay.style.opacity *= 0.9;
-  }
-
-  // Fear pulsing effect (slightly gray)
-  const fearOverlay = Math.min(0.3, fear / 200);
-  renderer.setClearColor(
-    new THREE.Color(0xcccccc).lerp(new THREE.Color(0x999999), fearOverlay)
-  );
-}
-
-// ===============================
-// AUDIO SETUP
-// ===============================
-const wolfHowl = new THREE.Audio(listener);
-const heartbeat = new THREE.Audio(listener);
-
-function loadAudio() {
-  const loader = new THREE.AudioLoader();
-
-  loader.load("assets/audio/wolf_howl.mp3", buffer => {
-    wolfHowl.setBuffer(buffer);
-    wolfHowl.setLoop(false);
-    wolfHowl.setVolume(0.7);
-  });
-
-  loader.load("assets/audio/heartbeat.mp3", buffer => {
-    heartbeat.setBuffer(buffer);
-    heartbeat.setLoop(true);
-    heartbeat.setVolume(0.5);
-  });
-}
-
-// ===============================
-// AUDIO LOGIC
-// ===============================
-function updateAudio(delta) {
-  // Play heartbeat if fear > 50 and not playing
-  if (fear > 50 && !heartbeat.isPlaying) heartbeat.play();
-  if (fear < 40 && heartbeat.isPlaying) heartbeat.stop();
-
-  // Wolves near → howl randomly
-  wolves.forEach(w => {
-    if (w.mesh && w.mesh.position.distanceTo(camera.position) < 15) {
-      if (!wolfHowl.isPlaying && Math.random() < delta * 0.05) wolfHowl.play();
-    }
-  });
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateScreenEffects(delta);
-// updateAudio(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 10 LOADED: Screen effects, fear visuals, audio cues");
-/* =========================================================
-   PART 11 / 20
-   INVENTORY, CRAFTING, ITEM PICKUP
-========================================================= */
-
-// ===============================
-// ITEM CLASS
-// ===============================
-class Item {
-  constructor(name, x, z, color) {
-    this.name = name;
-    this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.4, 0.4),
-      new THREE.MeshStandardMaterial({ color })
-    );
-    this.mesh.position.set(x, 0.2, z);
-    this.mesh.castShadow = true;
-    scene.add(this.mesh);
-    this.picked = false;
-  }
-
-  checkPickup() {
-    if (this.picked) return;
-    const dist = this.mesh.position.distanceTo(camera.position);
-    if (dist < 1.5) {
-      this.picked = true;
-      scene.remove(this.mesh);
-      inventory[this.name] = (inventory[this.name] || 0) + 1;
-      updateHUD();
-      showDialogue(`${this.name} picked up`);
-    }
-  }
-}
-
-// ===============================
-// SPAWN ITEMS
-// ===============================
-const items = [];
-items.push(new Item("Battery Pack", 3, -3, 0xffff00));
-items.push(new Item("Medkit", -2, 2, 0xff0000));
-items.push(new Item("Bandage", 5, 4, 0xffffff));
-
-// ===============================
-// CRAFTING FUNCTION
-// ===============================
-function craftItem() {
-  // Survival Kit: Battery Pack + Medkit
-  if (inventory["Battery Pack"] >= 1 && inventory["Medkit"] >= 1) {
-    inventory["Battery Pack"]--;
-    inventory["Medkit"]--;
-    inventory["Survival Kit"] = (inventory["Survival Kit"] || 0) + 1;
-    updateHUD();
-    showDialogue("Crafted: Survival Kit");
-  }
-}
-
-// ===============================
-// CRAFTING KEY (C)
-window.addEventListener("keydown", e => {
-  if (e.code === "KeyC") craftItem();
-});
-
-// ===============================
-// CHECK PICKUP LOOP
-// ===============================
-function updateItems(delta) {
-  items.forEach(item => item.checkPickup());
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateItems(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 11 LOADED: Inventory & crafting ready");
-/* =========================================================
-   PART 12 / 20
-   TIMED WOLVES & BOSS BEHAVIOR
-========================================================= */
-
-// ===============================
-// TIMED WOLF EVENTS (3 / 5 / 10 MIN)
-let wolfTimers = {
-  threeMin: false,
-  fiveMin: false,
-  tenMin: false
-};
-
-function updateTimedWolves(delta) {
-  if (gameTime > 180 && !wolfTimers.threeMin) {
-    spawnWolf(camera.position.x + 15, camera.position.z + 10);
-    wolfTimers.threeMin = true;
-    showDialogue("You hear a wolf nearby...");
-  }
-
-  if (gameTime > 300 && !wolfTimers.fiveMin) {
-    for (let i = 0; i < 3; i++)
-      spawnWolf(
-        camera.position.x + (Math.random() - 0.5) * 20,
-        camera.position.z + (Math.random() - 0.5) * 20
-      );
-    wolfTimers.fiveMin = true;
-    showDialogue("Wolves are surrounding you!");
-  }
-
-  if (gameTime > 600 && !wolfTimers.tenMin) {
-    for (let i = 0; i < 10; i++)
-      spawnWolf(
-        camera.position.x + (Math.random() - 0.5) * 50,
-        camera.position.z + (Math.random() - 0.5) * 50
-      );
-    wolfTimers.tenMin = true;
-    showDialogue("A horde of wolves is chasing!");
-  }
-}
-
-// ===============================
-// BOSS WOLF IN CAVE
-let bossSpawned = false;
-let bossWolf = null;
-
-function updateBoss(delta) {
-  const cave = caves[0]; // first cave
-  if (!bossSpawned && camera.position.distanceTo(new THREE.Vector3(cave.x, 0, cave.z)) < 25) {
-    bossWolf = spawnWolf(cave.x, cave.z, true);
-    bossSpawned = true;
-    showDialogue("A huge wolf emerges from the cave!");
-  }
-
-  if (bossWolf && bossWolf.mesh) {
-    const dist = bossWolf.mesh.position.distanceTo(camera.position);
-
-    // chase player if close
-    if (dist < 30) bossWolf.state = "chase";
-
-    if (bossWolf.state === "chase") {
-      const dir = new THREE.Vector3()
-        .subVectors(camera.position, bossWolf.mesh.position)
-        .normalize();
-      bossWolf.mesh.position.add(dir.multiplyScalar(3 * delta));
-
-      if (dist < 1.5) {
-        player.health -= 25 * delta;
-        player.health = Math.max(player.health, 0);
-      }
-    }
-  }
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateTimedWolves(delta);
-// updateBoss(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 12 LOADED: Timed wolves & boss behavior active");
-/* =========================================================
-   PART 13 / 20
-   DAMAGE FEEDBACK, AMBIENT AUDIO & JUMP SCARES
-========================================================= */
-
-// ===============================
-// AMBIENT FOREST AUDIO
-// ===============================
-const listener = new THREE.AudioListener();
-camera.add(listener);
-
-const ambientForest = new THREE.Audio(listener);
-const audioLoader = new THREE.AudioLoader();
-audioLoader.load("assets/audio/forest_ambient.mp3", buffer => {
-  ambientForest.setBuffer(buffer);
-  ambientForest.setLoop(true);
-  ambientForest.setVolume(0.3);
-  ambientForest.play();
-});
-
-const wolfHowl = new THREE.Audio(listener);
-audioLoader.load("assets/audio/wolf_howl.mp3", buffer => {
-  wolfHowl.setBuffer(buffer);
-  wolfHowl.setLoop(false);
-  wolfHowl.setVolume(0.8);
-});
-
-// ===============================
-// PLAYER DAMAGE FLASH (SCREEN OVERLAY)
-const damageOverlay = document.createElement("div");
-damageOverlay.style.position = "fixed";
-damageOverlay.style.inset = 0;
-damageOverlay.style.backgroundColor = "red";
-damageOverlay.style.opacity = 0;
-damageOverlay.style.pointerEvents = "none";
-damageOverlay.style.zIndex = 1000;
-document.body.appendChild(damageOverlay);
-
-function updateDamageFlash(delta) {
-  if (player.health < 100) {
-    damageOverlay.style.opacity = Math.min(0.6, (100 - player.health) / 80);
-  } else {
-    damageOverlay.style.opacity *= 0.9;
-  }
-}
-
-// ===============================
-// JUMP SCARES LOGIC
+let wolfTimers = { threeMin: false, fiveMin: false, tenMin: false };
 let jumpTimer = 0;
-function updateJumpScares(delta) {
-  jumpTimer += delta;
-  if (jumpTimer > 20) {
-    if (Math.random() < 0.5 && wolves.length > 0) {
-      wolfHowl.play();
-      // Emissive flash on some trees
-      trees.forEach(t => {
-        if (Math.random() < 0.05) t.traverse(n => {
-          if (n.material) n.material.emissive.set(0xff0000);
-          setTimeout(() => { if (n.material) n.material.emissive.set(0x000000); }, 200);
-        });
-      });
-    }
-    jumpTimer = 0;
-  }
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateDamageFlash(delta);
-// updateJumpScares(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 13 LOADED: Damage, ambient audio, jump scares active");
-/* =========================================================
-   PART 14 / 20
-   HUD, MAP, COMPASS & INVENTORY
-========================================================= */
-
-// ===============================
-// HUD ELEMENTS
-// ===============================
-const healthDiv = document.createElement("div");
-healthDiv.style.position = "fixed";
-healthDiv.style.top = "10px";
-healthDiv.style.left = "10px";
-healthDiv.style.color = "white";
-healthDiv.style.fontSize = "18px";
-healthDiv.style.zIndex = "100";
-document.body.appendChild(healthDiv);
-
-const batteryDiv = document.createElement("div");
-batteryDiv.style.position = "fixed";
-batteryDiv.style.top = "30px";
-batteryDiv.style.left = "10px";
-batteryDiv.style.color = "white";
-batteryDiv.style.fontSize = "18px";
-batteryDiv.style.zIndex = "100";
-document.body.appendChild(batteryDiv);
-
-const inventoryDiv = document.createElement("div");
-inventoryDiv.style.position = "fixed";
-inventoryDiv.style.bottom = "10px";
-inventoryDiv.style.left = "10px";
-inventoryDiv.style.color = "white";
-inventoryDiv.style.fontSize = "16px";
-inventoryDiv.style.zIndex = "100";
-document.body.appendChild(inventoryDiv);
-
-const compassDiv = document.createElement("div");
-compassDiv.style.position = "fixed";
-compassDiv.style.top = "10px";
-compassDiv.style.right = "10px";
-compassDiv.style.color = "white";
-compassDiv.style.fontSize = "16px";
-compassDiv.style.zIndex = "100";
-document.body.appendChild(compassDiv);
-
-// ===============================
-// UPDATE HUD
-// ===============================
-function updateHUD() {
-  healthDiv.innerText = `Health: ${Math.round(player.health)}`;
-  batteryDiv.innerText = `Flashlight: ${Math.round(flashlightBattery)}%`;
-  inventoryDiv.innerText = "Inventory: " + Object.keys(inventory).map(k => `${k}(${inventory[k]})`).join(", ");
-  compassDiv.innerText = `X: ${camera.position.x.toFixed(1)}, Z: ${camera.position.z.toFixed(1)}`;
-}
-
-// ===============================
-// FLASHLIGHT CONTROL
-// ===============================
-let flashlight = new THREE.SpotLight(0xffffff, 1, 15, Math.PI/6, 0.2, 1);
-flashlight.position.set(0, 1.5, 0);
-flashlight.target.position.set(0,1.5,-1);
-camera.add(flashlight);
-camera.add(flashlight.target);
-
-document.addEventListener("keydown", e => {
-  if (e.code === "KeyF") flashlightOn = !flashlightOn;
-  flashlight.intensity = flashlightOn ? 1 : 0;
-});
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// updateHUD();
-/* =========================================================
-   PART 15 / 20
-   CUTSCENES, DIALOGUE TREE & STORY FLAGS
-========================================================= */
+let inventory = {
+    medkits: 1,
+    batteries: 2,
+    "Battery Pack": 0,
+    "Medkit": 0,
+    "Bandage": 0,
+    "Survival Kit": 0
+};
 
 // ===============================
 // STORY FLAGS
 // ===============================
 const storyFlags = {
-  helpedClassmate: false,
-  exploredCave: false,
-  foundSecret: false,
-  bossDefeated: false,
-  classmateLost: false
+    helpedClassmate: false,
+    exploredCave: false,
+    foundSecret: false,
+    bossDefeated: false,
+    classmateLost: false
 };
 
 // ===============================
-// DIALOGUE TREE
+// WOLF CLASS
 // ===============================
-const dialogueContainer = document.createElement("div");
-dialogueContainer.style.position = "fixed";
-dialogueContainer.style.bottom = "50px";
-dialogueContainer.style.left = "50%";
-dialogueContainer.style.transform = "translateX(-50%)";
-dialogueContainer.style.backgroundColor = "rgba(0,0,0,0.7)";
-dialogueContainer.style.color = "white";
-dialogueContainer.style.padding = "10px";
-dialogueContainer.style.display = "none";
-dialogueContainer.style.zIndex = "200";
-document.body.appendChild(dialogueContainer);
-/* =========================================================
-   PART 16 / 20
-   ENVIRONMENTAL HAZARDS & TENSION
-========================================================= */
-
-// ===============================
-// SIMPLE OBSTACLES
-const obstacles = [];
-
-function spawnObstacle(x, z, size = 1, color = 0x554433) {
-  const box = new THREE.Mesh(
-    new THREE.BoxGeometry(size, size*0.5, size),
-    new THREE.MeshStandardMaterial({ color })
-  );
-  box.position.set(x, 0.25, z);
-  box.castShadow = true;
-  box.receiveShadow = true;
-  scene.add(box);
-  obstacles.push(box);
-}
-
-// Spawn some random fallen logs and rocks
-for (let i = 0; i < 20; i++) {
-  spawnObstacle((Math.random()-0.5)*80, (Math.random()-0.5)*80, 2 + Math.random()*2);
-}
-
-// ===============================
-// CHECK COLLISIONS
-function checkObstacleCollisions() {
-  obstacles.forEach(o => {
-    const dist = o.position.distanceTo(camera.position);
-    if (dist < 1.0) {
-      // Simple pushback
-      const dir = new THREE.Vector3().subVectors(camera.position, o.position).normalize();
-      camera.position.add(dir.multiplyScalar(0.1));
-    }
-  });
-}
-
-// ===============================
-// DYNAMIC FOG FOR TENSION
-function updateFog() {
-  // Fog increases as wolves or player fear increases
-  const maxFog = 0.08;
-  const minFog = 0.02;
-  scene.fog.density = minFog + (fear / 200) * (maxFog - minFog);
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Add inside animate():
-//
-// checkObstacleCollisions();
-// updateFog();
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 16 LOADED: Environmental hazards and tension ready");
-
-function showChoices(choices) {
-  dialogueContainer.innerHTML = "";
-  dialogueContainer.style.display = "block";
-
-  choices.forEach(choice => {
-    const btn = document.createElement("button");
-    btn.innerText = choice.text;
-    btn.style.display = "block";
-    btn.style.margin = "5px";
-    btn.onclick = () => {
-      choice.action();
-      dialogueContainer.style.display = "none";
-    };
-    dialogueContainer.appendChild(btn);
-  });
-}
-
-// ===============================
-// START CUTSCENE (FIELD TRIP WAKEUP)
-function startFieldTripCutscene() {
-  cutsceneActive = true;
-  camera.position.set(0,1.6,5);
-  let t = 0;
-
-  const cutsceneInterval = setInterval(() => {
-    t += 0.02;
-    camera.position.y = 1.6 + Math.sin(t) * 0.05;
-    camera.rotation.y += 0.001;
-
-    if (t > Math.PI*2) {
-      clearInterval(cutsceneInterval);
-      cutsceneActive = false;
-      showChoices([
-        { text: "Check on Alex", action: () => { storyFlags.helpedClassmate=true; } },
-        { text: "Explore the forest", action: () => { storyFlags.exploredCave=true; } },
-        { text: "Keep moving forward", action: () => {} }
-      ]);
-    }
-  }, 16);
-}
-
-// ===============================
-// ENDINGS FUNCTION
-function triggerEnding(type) {
-  cutsceneActive = true;
-  const fadeDiv = document.createElement("div");
-  fadeDiv.style.position = "fixed";
-  fadeDiv.style.inset = 0;
-  fadeDiv.style.backgroundColor = "black";
-  fadeDiv.style.opacity = 0;
-  fadeDiv.style.zIndex = 300;
-  document.body.appendChild(fadeDiv);
-
-  let opacity = 0;
-  const fadeInterval = setInterval(() => {
-    opacity += 0.01;
-    fadeDiv.style.opacity = opacity;
-    if (opacity >= 1) clearInterval(fadeInterval);
-  }, 30);
-
-  setTimeout(() => {
-    const text = document.createElement("div");
-    text.style.position = "absolute";
-    text.style.top = "50%";
-    text.style.left = "50%";
-    text.style.transform = "translate(-50%, -50%)";
-    text.style.color = "white";
-    text.style.fontSize = "36px";
-    text.style.textAlign = "center";
-    text.style.zIndex = 310;
-
-    if (type==="good") text.innerText = "You and your classmates survived the forest!";
-    else if (type==="bad") text.innerText = "You didn’t make it out alive...";
-    else if (type==="secret") text.innerText = "A secret path reveals the hidden ending!";
-
-    document.body.appendChild(text);
-  }, 3000);
-}
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// ===============================
-// Call startFieldTripCutscene() when game begins
-// Call triggerEnding("good"/"bad"/"secret") based on storyFlags
-/* =========================================================
-   PART 17 / 20
-   PLAYER MOVEMENT & FLASHLIGHT MECHANICS
-========================================================= */
-
-// ===============================
-// PLAYER VARIABLES
-let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-let canJump = true;
-let velocity = new THREE.Vector3();
-const speed = 5;
-
-// ===============================
-// KEY INPUTS
-const keys = {};
-document.addEventListener('keydown', e => { keys[e.code] = true; });
-document.addEventListener('keyup', e => { keys[e.code] = false; });
-
-// ===============================
-// FLASHLIGHT VARIABLES
-let flashlightOn = true;
-let flashlightBattery = 100;
-
-// ===============================
-// UPDATE PLAYER MOVEMENT
-function updatePlayer(delta) {
-  if (!controls.isLocked || cutsceneActive) return;
-
-  // WASD movement
-  moveForward = keys['KeyW'];
-  moveBackward = keys['KeyS'];
-  moveLeft = keys['KeyA'];
-  moveRight = keys['KeyD'];
-
-  velocity.x -= velocity.x * 10.0 * delta;
-  velocity.z -= velocity.z * 10.0 * delta;
-
-  const dir = new THREE.Vector3();
-  if (moveForward) dir.z -= 1;
-  if (moveBackward) dir.z += 1;
-  if (moveLeft) dir.x -= 1;
-  if (moveRight) dir.x += 1;
-
-  dir.normalize();
-
-  if (dir.length() > 0) {
-    velocity.add(dir.multiplyScalar(speed * delta));
-  }
-
-  camera.position.add(velocity);
-  // simple gravity
-  if (camera.position.y > 1.6) velocity.y -= 9.8 * delta;
-  else camera.position.y = 1.6;
-
-  // sprint
-  if (keys['ShiftLeft']) camera.position.add(dir.multiplyScalar(speed * delta));
-}
-
-// ===============================
-// FLASHLIGHT BATTERY DRAIN
-function updateFlashlight(delta) {
-  if (flashlightOn) {
-    flashlightBattery -= delta * 2;
-    flashlightBattery = Math.max(flashlightBattery, 0);
-    flashlight.intensity = flashlightBattery > 0 ? 1 : 0;
-  } else {
-    flashlight.intensity = 0;
-  }
-}
-
-// ===============================
-// FLASHLIGHT TOGGLE
-document.addEventListener('keydown', e => {
-  if (e.code === 'KeyF') flashlightOn = !flashlightOn;
-});
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// Add inside animate():
-//
-// updatePlayer(delta);
-// updateFlashlight(delta);
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 17 LOADED: Player movement and flashlight mechanics active");
-/* =========================================================
-   PART 18 / 20
-   WOLF AI REFINEMENT & ATTACK MECHANICS
-========================================================= */
-
-// ===============================
-// WOLF CLASS UPDATED
 class Wolf {
-  constructor(x, z, isBoss=false) {
-    this.isBoss = isBoss;
-    this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1,1,2),
-      new THREE.MeshStandardMaterial({color: isBoss ? 0x550000 : 0x222222})
+    constructor(x, z, isBoss = false) {
+        this.isBoss = isBoss;
+        
+        // Create wolf mesh (simple box shape for now)
+        const geometry = new THREE.BoxGeometry(isBoss ? 2 : 1, isBoss ? 1.5 : 1, isBoss ? 3 : 2);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: isBoss ? 0x550000 : 0x222222,
+            roughness: 1
+        });
+        
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(x, isBoss ? 0.75 : 0.5, z);
+        this.mesh.castShadow = true;
+        
+        // Add red eyes
+        const eyeGeometry = new THREE.SphereGeometry(0.08);
+        const eyeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.6
+        });
+        
+        this.eyeL = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        this.eyeR = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        this.eyeL.position.set(isBoss ? 0.3 : 0.2, 0.2, 0.1);
+        this.eyeR.position.set(isBoss ? 0.3 : 0.2, 0.2, -0.1);
+        this.mesh.add(this.eyeL);
+        this.mesh.add(this.eyeR);
+        
+        scene.add(this.mesh);
+        
+        // AI Properties
+        this.state = "idle"; // idle, stalk, chase, retreat
+        this.speed = isBoss ? 4 : 3;
+        this.attackCooldown = 0;
+        this.circleAngle = Math.random() * Math.PI * 2;
+        this.stalkDistance = isBoss ? 40 : 30;
+        this.chaseDistance = isBoss ? 50 : 20;
+        this.attackDistance = isBoss ? 2.5 : 1.8;
+    }
+    
+    update(delta) {
+        if (!this.mesh) return;
+        
+        const playerPos = controls.getObject().position;
+        const dist = this.mesh.position.distanceTo(playerPos);
+        
+        // AI STATE LOGIC
+        if (this.state === "idle" && dist < this.stalkDistance) {
+            this.state = "stalk";
+        }
+        
+        if (this.state === "stalk" && dist < this.chaseDistance) {
+            this.state = "chase";
+        }
+        
+        if (this.state === "chase" && dist > this.chaseDistance + 10) {
+            this.state = "stalk";
+        }
+        
+        // BEHAVIOR
+        if (this.state === "stalk") {
+            // Circle player
+            this.circleAngle += delta;
+            const radius = 15;
+            const targetX = playerPos.x + Math.cos(this.circleAngle) * radius;
+            const targetZ = playerPos.z + Math.sin(this.circleAngle) * radius;
+            
+            const dir = new THREE.Vector3(targetX - this.mesh.position.x, 0, targetZ - this.mesh.position.z).normalize();
+            this.mesh.position.add(dir.multiplyScalar(this.speed * 0.5 * delta));
+            this.mesh.lookAt(playerPos.x, this.mesh.position.y, playerPos.z);
+        }
+        
+        if (this.state === "chase") {
+            // Chase player
+            const dir = new THREE.Vector3(playerPos.x - this.mesh.position.x, 0, playerPos.z - this.mesh.position.z).normalize();
+            this.mesh.position.add(dir.multiplyScalar(this.speed * delta));
+            this.mesh.lookAt(playerPos.x, this.mesh.position.y, playerPos.z);
+            
+            // Attack if close enough
+            if (dist < this.attackDistance && this.attackCooldown <= 0) {
+                player.health -= this.isBoss ? 25 : 15;
+                fear += this.isBoss ? 20 : 12;
+                this.attackCooldown = 2.0;
+                
+                // Damage flash
+                showDamageFlash();
+            }
+        }
+        
+        if (this.state === "idle") {
+            // Random wandering
+            this.circleAngle += delta * 0.5;
+            this.mesh.position.x += Math.sin(this.circleAngle) * delta * 0.5;
+            this.mesh.position.z += Math.cos(this.circleAngle) * delta * 0.5;
+        }
+        
+        // Keep on ground
+        this.mesh.position.y = this.isBoss ? 0.75 : 0.5;
+        
+        // Update attack cooldown
+        if (this.attackCooldown > 0) {
+            this.attackCooldown -= delta;
+        }
+    }
+}
+
+// ===============================
+// INITIALIZATION
+// ===============================
+function init() {
+    console.log("=== EARS OF THE FOREST - INITIALIZING ===");
+    
+    // 1. SCENE
+    scene = new THREE.Scene();
+    
+    // Sky-blue background for daytime
+    scene.background = new THREE.Color(0x87CEEB);
+    
+    // Light gray translucent fog
+    scene.fog = new THREE.Fog(0xCCCCCC, 20, 150);
+    
+    // 2. RENDERER
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+    
+    // 3. CAMERA
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 1.7, 5);
+    
+    // 4. CLOCK
+    clock = new THREE.Clock();
+    
+    // 5. SETUP ALL SYSTEMS
+    setupLighting();
+    setupGround();
+    setupEnvironment();
+    setupObstacles();
+    setupCave();
+    setupFlashlight();
+    setupControls();
+    setupHUD();
+    
+    // 6. START CUTSCENE
+    startFieldTripCutscene();
+    
+    console.log("=== INITIALIZATION COMPLETE ===");
+}
+
+// ===============================
+// 1. ENVIRONMENT & VISUALS
+// ===============================
+function setupLighting() {
+    // Directional light (sun)
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    sunLight.position.set(100, 200, 100);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 500;
+    scene.add(sunLight);
+    
+    // Hemisphere light for ambient
+    const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x4f6b4f, 0.6);
+    scene.add(hemisphereLight);
+    
+    // Ambient light
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+    scene.add(ambientLight);
+}
+
+function setupGround() {
+    // Green forest floor
+    const groundGeometry = new THREE.PlaneGeometry(500, 500, 64, 64);
+    
+    // Add slight terrain variation
+    const vertices = groundGeometry.attributes.position;
+    for (let i = 0; i < vertices.count; i++) {
+        const x = vertices.getX(i);
+        const z = vertices.getZ(i);
+        const height = Math.sin(x * 0.05) * 1.5 + Math.cos(z * 0.05) * 1.5;
+        vertices.setY(i, height);
+    }
+    groundGeometry.computeVertexNormals();
+    
+    const groundMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x4f6b4f,
+        roughness: 0.9,
+        metalness: 0
+    });
+    
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -1;
+    ground.receiveShadow = true;
+    scene.add(ground);
+}
+
+function setupEnvironment() {
+    // Create some trees (simple cylinders and spheres)
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1f, roughness: 1 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f5f2f, roughness: 0.9 });
+    
+    for (let i = 0; i < 50; i++) {
+        const x = (Math.random() - 0.5) * 400;
+        const z = (Math.random() - 0.5) * 400;
+        
+        // Don't spawn trees in starting area
+        if (Math.abs(x) < 20 && Math.abs(z) < 20) continue;
+        
+        // Trunk
+        const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.6, 5 + Math.random() * 3, 8),
+            trunkMat
+        );
+        trunk.position.set(x, 2.5, z);
+        trunk.castShadow = true;
+        scene.add(trunk);
+        
+        // Leaves
+        const leaves = new THREE.Mesh(
+            new THREE.SphereGeometry(2 + Math.random() * 2, 8, 8),
+            leafMat
+        );
+        leaves.position.set(x, 6 + Math.random() * 2, z);
+        leaves.castShadow = true;
+        scene.add(leaves);
+    }
+    
+    // Create some rocks
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 1 });
+    for (let i = 0; i < 30; i++) {
+        const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(1 + Math.random() * 2, 0),
+            rockMat
+        );
+        rock.position.set(
+            (Math.random() - 0.5) * 300,
+            0.5,
+            (Math.random() - 0.5) * 300
+        );
+        rock.rotation.set(Math.random(), Math.random(), Math.random());
+        rock.castShadow = true;
+        scene.add(rock);
+    }
+}
+
+function setupCave() {
+    // Cave entrance (torus shape)
+    const caveMat = new THREE.MeshStandardMaterial({ 
+        color: 0x333333,
+        roughness: 1
+    });
+    
+    const caveEntrance = new THREE.Mesh(
+        new THREE.TorusGeometry(8, 3, 16, 32),
+        caveMat
     );
-    this.mesh.position.set(x,0.5,z);
-    this.mesh.castShadow = true;
-    scene.add(this.mesh);
+    caveEntrance.rotation.x = Math.PI / 2;
+    caveEntrance.position.set(60, 5, 60);
+    caveEntrance.castShadow = true;
+    scene.add(caveEntrance);
+    
+    // Cave interior (dark cylinder)
+    const caveInterior = new THREE.Mesh(
+        new THREE.CylinderGeometry(8, 8, 30, 16, 1, true),
+        new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            side: THREE.BackSide,
+            transparent: true,
+            opacity: 0.7
+        })
+    );
+    caveInterior.rotation.x = Math.PI / 2;
+    caveInterior.position.set(60, 5, 75);
+    scene.add(caveInterior);
+    
+    // Boss wolf spawn point is inside cave
+    window.cavePosition = new THREE.Vector3(60, 0, 75);
+}
 
-    this.state = "idle"; // idle, stalk, chase, retreat
-    this.fearLevel = 0;
-    this.speed = isBoss ? 3 : 2;
-    this.chaseEvent = null;
-  }
+function setupObstacles() {
+    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x554433, roughness: 1 });
+    
+    // Fallen logs
+    for (let i = 0; i < 20; i++) {
+        const logLength = 3 + Math.random() * 4;
+        const log = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.3, logLength, 8),
+            obstacleMat
+        );
+        log.position.set(
+            (Math.random() - 0.5) * 200,
+            0.3,
+            (Math.random() - 0.5) * 200
+        );
+        log.rotation.x = Math.PI / 2;
+        log.castShadow = true;
+        log.receiveShadow = true;
+        scene.add(log);
+        obstacles.push(log);
+    }
+    
+    // Rocks
+    for (let i = 0; i < 15; i++) {
+        const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(1.2 + Math.random() * 1.5, 0),
+            new THREE.MeshStandardMaterial({ color: 0x666666 })
+        );
+        rock.position.set(
+            (Math.random() - 0.5) * 200,
+            0.8,
+            (Math.random() - 0.5) * 200
+        );
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        scene.add(rock);
+        obstacles.push(rock);
+    }
+}
 
-  update(delta) {
-    if (!this.mesh) return;
-    const dist = this.mesh.position.distanceTo(camera.position);
+// ===============================
+// 2. PLAYER & CONTROLS
+// ===============================
+function setupControls() {
+    // Pointer lock controls
+    controls = new THREE.PointerLockControls(camera, document.body);
+    scene.add(controls.getObject());
+    
+    // Click anywhere to engage pointer lock
+    document.addEventListener("click", () => {
+        if (!controls.isLocked) {
+            controls.lock();
+        }
+    });
+    
+    // Keyboard input
+    document.addEventListener("keydown", (event) => {
+        switch (event.code) {
+            case "KeyW": moveForward = true; break;
+            case "KeyS": moveBackward = true; break;
+            case "KeyA": moveLeft = true; break;
+            case "KeyD": moveRight = true; break;
+            case "Space": 
+                if (canJump) {
+                    velocity.y = 8;
+                    canJump = false;
+                }
+                break;
+            case "ShiftLeft": sprinting = true; break;
+            case "KeyF": // Flashlight toggle
+                flashlightOn = !flashlightOn;
+                window.flashlight.visible = flashlightOn;
+                break;
+            case "KeyH": // Use medkit
+                if (inventory.medkits > 0) {
+                    player.health = Math.min(100, player.health + 40);
+                    inventory.medkits--;
+                    updateHUD();
+                    showDialogue("Used Medkit: +40 Health");
+                }
+                break;
+            case "KeyB": // Use battery
+                if (inventory.batteries > 0) {
+                    player.battery = player.maxBattery;
+                    inventory.batteries--;
+                    updateHUD();
+                    showDialogue("Used Battery: Flashlight recharged");
+                }
+                break;
+            case "KeyC": // Craft survival kit
+                craftItem();
+                break;
+        }
+    });
+    
+    document.addEventListener("keyup", (event) => {
+        switch (event.code) {
+            case "KeyW": moveForward = false; break;
+            case "KeyS": moveBackward = false; break;
+            case "KeyA": moveLeft = false; break;
+            case "KeyD": moveRight = false; break;
+            case "ShiftLeft": sprinting = false; break;
+        }
+    });
+}
 
-    // Determine AI state
-    if (this.isBoss) {
-      if (dist < 30) this.state = "chase";
-      else this.state = "idle";
+function updatePlayerMovement(delta) {
+    if (!controls.isLocked || cutsceneActive) return;
+    
+    // Apply friction
+    velocity.x -= velocity.x * 10.0 * delta;
+    velocity.z -= velocity.z * 10.0 * delta;
+    
+    // Gravity
+    velocity.y -= 9.8 * delta;
+    
+    // Direction based on input
+    direction.z = Number(moveForward) - Number(moveBackward);
+    direction.x = Number(moveRight) - Number(moveLeft);
+    direction.normalize();
+    
+    // Speed calculation
+    let speed = 8.0;
+    if (sprinting && stamina > 0) {
+        speed = 14.0;
+        stamina -= 30 * delta;
     } else {
-      if (dist < 15) this.state = "stalk";
-      if (dist < 3) this.state = "chase";
-      if (dist > 20) this.state = "idle";
+        stamina = Math.min(maxStamina, stamina + 15 * delta);
     }
-
-    // Apply behavior
-    let dir = new THREE.Vector3();
-    if (this.state === "chase") {
-      dir.subVectors(camera.position, this.mesh.position).normalize();
-      this.mesh.position.add(dir.multiplyScalar(this.speed*delta));
-      if (dist < 1.5) {
-        player.health -= (this.isBoss ? 20 : 10)*delta;
-        player.health = Math.max(player.health,0);
-      }
-    } else if (this.state === "stalk") {
-      dir.subVectors(camera.position, this.mesh.position).normalize();
-      this.mesh.position.add(dir.multiplyScalar((this.speed/2)*delta));
-    } else if (this.state === "retreat") {
-      dir.subVectors(this.mesh.position, camera.position).normalize();
-      this.mesh.position.add(dir.multiplyScalar(this.speed*delta));
+    
+    // Apply movement
+    if (moveForward || moveBackward) {
+        velocity.z -= direction.z * speed * delta;
     }
-  }
-}
-
-// ===============================
-// SPAWN FUNCTION
-function spawnWolf(x, z, isBoss=false) {
-  const w = new Wolf(x, z, isBoss);
-  wolves.push(w);
-  return w;
-}
-
-// ===============================
-// BOSSES & HORDE
-const caves = [{x:40, z:40}]; // boss cave
-let bossSpawned = false;
-
-// ===============================
-// MAIN LOOP INTEGRATION
-// Add inside animate():
-//
-// wolves.forEach(w => w.update(delta));
-
-// ===============================
-// DEBUG CONFIRM
-// ===============================
-console.log("PART 18 LOADED: Wolf AI and attack mechanics active");
-/* =========================================================
-   PART 19 / 20
-   GAME LOOP REFINEMENTS & EVENT SCHEDULING
-========================================================= */
-
-let gameTime = 0; // seconds
-let fear = 0; // global fear metric
-
-function animate() {
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
-  gameTime += delta;
-
-  if (!cutsceneActive) {
-    // Player
-    updatePlayer(delta);
-
-    // Flashlight
-    updateFlashlight(delta);
-
-    // Wolves
-    wolves.forEach(w => w.update(delta));
-    updateTimedWolves(delta);
-
-    // Boss
-    updateBoss(delta);
-
-    // Obstacles & fog
+    if (moveLeft || moveRight) {
+        velocity.x -= direction.x * speed * delta;
+    }
+    
+    // Move the player
+    controls.moveRight(-velocity.x * delta);
+    controls.moveForward(-velocity.z * delta);
+    
+    // Vertical movement
+    controls.getObject().position.y += velocity.y * delta;
+    
+    // Check if on ground
+    if (controls.getObject().position.y <= 1.7) {
+        controls.getObject().position.y = 1.7;
+        velocity.y = 0;
+        canJump = true;
+    }
+    
+    // Collision with obstacles
     checkObstacleCollisions();
-    updateFog();
+}
 
-    // HUD
-    updateHUD();
-
-    // Jump scares & damage
-    updateJumpScares(delta);
-    updateDamageFlash(delta);
-
-    // Story triggers
-    checkStoryTriggers();
-  }
-
-  // Render
-  renderer.render(scene, camera);
+function checkObstacleCollisions() {
+    const playerPos = controls.getObject().position;
+    
+    obstacles.forEach(obstacle => {
+        const distance = playerPos.distanceTo(obstacle.position);
+        if (distance < 2.0) {
+            // Push player away from obstacle
+            const pushDirection = new THREE.Vector3()
+                .subVectors(playerPos, obstacle.position)
+                .normalize();
+            controls.getObject().position.add(pushDirection.multiplyScalar(0.1));
+        }
+    });
 }
 
 // ===============================
-// STORY PROGRESSION TRIGGERS
-function checkStoryTriggers() {
-  // Secret path discovery
-  if (!storyFlags.foundSecret && camera.position.distanceTo(new THREE.Vector3(50,0,50)) < 3) {
-    storyFlags.foundSecret = true;
-    showDialogue([{text:"You found a hidden path!", action:()=>{}}]);
-  }
-
-  // Boss defeated
-  if (bossSpawned && bossWolf && bossWolf.mesh.position.distanceTo(camera.position) > 50) {
-    storyFlags.bossDefeated = true;
-  }
-
-  // Ending triggers
-  if (player.health <= 0) triggerEnding("bad");
-  else if (storyFlags.bossDefeated && storyFlags.helpedClassmate) triggerEnding("good");
-  else if (storyFlags.foundSecret) triggerEnding("secret");
+// 3. FLASHLIGHT
+// ===============================
+function setupFlashlight() {
+    const flashlight = new THREE.SpotLight(0xffffff, 2, 30, Math.PI / 6, 0.2, 1);
+    flashlight.position.set(0, 0, 0);
+    flashlight.target.position.set(0, 0, -1);
+    flashlight.castShadow = true;
+    flashlight.shadow.mapSize.width = 1024;
+    flashlight.shadow.mapSize.height = 1024;
+    camera.add(flashlight);
+    camera.add(flashlight.target);
+    window.flashlight = flashlight;
 }
+
+function updateFlashlight(delta) {
+    if (!flashlightOn || !window.flashlight) return;
+    
+    // Drain battery
+    player.battery -= delta * 3;
+    if (player.battery <= 0) {
+        player.battery = 0;
+        flashlightOn = false;
+        window.flashlight.visible = false;
+    }
+    
+    // Dim flashlight as battery drains
+    const intensity = Math.max(0.2, (player.battery / 100) * 2);
+    window.flashlight.intensity = intensity;
+}
+
+// ===============================
+// 4. WOLVES AI
+// ===============================
+function updateWolves(delta) {
+    wolves.forEach(wolf => {
+        if (wolf && wolf.update) {
+            wolf.update(delta);
+        }
+    });
+    
+    // Remove dead wolves
+    wolves = wolves.filter(wolf => wolf && wolf.mesh);
+}
+
+function spawnWolf(x, z, isBoss = false) {
+    const wolf = new Wolf(x, z, isBoss);
+    wolves.push(wolf);
+    return wolf;
+}
+
+function updateTimedWolfEvents() {
+    const minutes = gameTime / 60;
+    
+    // 3 minute event: single wolf
+    if (minutes > 3 && !wolfTimers.threeMin) {
+        const playerPos = controls.getObject().position;
+        const wolf = spawnWolf(playerPos.x + 20, playerPos.z + 20);
+        wolf.state = "stalk";
+        wolfTimers.threeMin = true;
+        showDialogue("You hear a wolf nearby...");
+    }
+    
+    // 5 minute event: wolf pack
+    if (minutes > 5 && !wolfTimers.fiveMin) {
+        const playerPos = controls.getObject().position;
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            const radius = 25;
+            const wolf = spawnWolf(
+                playerPos.x + Math.cos(angle) * radius,
+                playerPos.z + Math.sin(angle) * radius
+            );
+            wolf.state = "stalk";
+        }
+        wolfTimers.fiveMin = true;
+        showDialogue("Wolves are surrounding you!");
+    }
+    
+    // 10 minute event: horde
+    if (minutes > 10 && !wolfTimers.tenMin) {
+        const playerPos = controls.getObject().position;
+        for (let i = 0; i < 8; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 30 + Math.random() * 20;
+            const wolf = spawnWolf(
+                playerPos.x + Math.cos(angle) * radius,
+                playerPos.z + Math.sin(angle) * radius
+            );
+            wolf.state = "chase";
+        }
+        wolfTimers.tenMin = true;
+        showDialogue("A horde of wolves is chasing!");
+    }
+    
+    // Boss wolf spawn (in cave area)
+    const playerPos = controls.getObject().position;
+    const caveDist = playerPos.distanceTo(window.cavePosition || new THREE.Vector3(60, 0, 75));
+    
+    if (caveDist < 40 && !window.bossSpawned) {
+        const boss = spawnWolf(window.cavePosition.x, window.cavePosition.z, true);
+        boss.state = "chase";
+        window.bossSpawned = boss;
+        showDialogue("A massive wolf emerges from the cave!");
+    }
+}
+
+// ===============================
+// 5. STORY & ENDINGS
+// ===============================
+function checkStoryTriggers() {
+    const playerPos = controls.getObject().position;
+    
+    // Check for secret path
+    if (!storyFlags.foundSecret) {
+        const secretPos = new THREE.Vector3(100, 0, 100);
+        if (playerPos.distanceTo(secretPos) < 10) {
+            storyFlags.foundSecret = true;
+            showDialogue("You found a hidden path!");
+        }
+    }
+    
+    // Check if helped classmate (simulated by being near certain area)
+    if (!storyFlags.helpedClassmate) {
+        const classmateArea = new THREE.Vector3(-30, 0, -30);
+        if (playerPos.distanceTo(classmateArea) < 15) {
+            storyFlags.helpedClassmate = true;
+            showDialogue("You found a lost classmate and helped them!");
+        }
+    }
+    
+    // Check if explored cave
+    if (!storyFlags.exploredCave) {
+        if (playerPos.distanceTo(window.cavePosition || new THREE.Vector3(60, 0, 75)) < 25) {
+            storyFlags.exploredCave = true;
+            showDialogue("You discovered the dark cave...");
+        }
+    }
+    
+    // Check if boss defeated
+    if (!storyFlags.bossDefeated && window.bossSpawned) {
+        if (!window.bossSpawned.mesh || window.bossSpawned.mesh.position.y < -10) {
+            storyFlags.bossDefeated = true;
+            showDialogue("You defeated the boss wolf!");
+        }
+    }
+    
+    // Check for endings
+    if (player.health <= 0) {
+        triggerEnding("bad");
+    } else if (storyFlags.bossDefeated && storyFlags.helpedClassmate && gameTime > 300) {
+        triggerEnding("good");
+    } else if (storyFlags.foundSecret && gameTime > 600) {
+        triggerEnding("secret");
+    }
+}
+
+// ===============================
+// 6. INVENTORY & CRAFTING
+// ===============================
+function craftItem() {
+    // Survival Kit: Battery Pack + Medkit
+    if (inventory["Battery Pack"] >= 1 && inventory["Medkit"] >= 1) {
+        inventory["Battery Pack"]--;
+        inventory["Medkit"]--;
+        inventory["Survival Kit"] = (inventory["Survival Kit"] || 0) + 1;
+        inventory.medkits += 1; // Survival kit gives medkit
+        updateHUD();
+        showDialogue("Crafted Survival Kit!");
+    } else {
+        showDialogue("Need 1 Battery Pack and 1 Medkit to craft!");
+    }
+}
+
+// ===============================
+// 7. ENVIRONMENTAL EFFECTS
+// ===============================
+function updateFearSystem(delta) {
+    // Natural fear increase
+    fear += delta * 0.2;
+    
+    // Darkness increases fear
+    if (!flashlightOn && (insideCave || scene.fog.density > 0.05)) {
+        fear += delta * 0.5;
+    }
+    
+    // Wolves nearby increase fear
+    const playerPos = controls.getObject().position;
+    let wolfFear = 0;
+    wolves.forEach(wolf => {
+        if (wolf && wolf.mesh) {
+            const dist = playerPos.distanceTo(wolf.mesh.position);
+            if (dist < 30) {
+                wolfFear += (30 - dist) * 0.1;
+            }
+        }
+    });
+    fear += wolfFear * delta;
+    
+    // Low health increases fear
+    if (player.health < 40) {
+        fear += delta * 0.3;
+    }
+    
+    // Cap fear
+    fear = Math.min(maxFear, fear);
+    
+    // Update fog based on fear
+    const targetFogDensity = 0.02 + (fear / maxFear) * 0.06;
+    scene.fog.density += (targetFogDensity - scene.fog.density) * delta * 2;
+    
+    // Pulse fog
+    fogPulse += delta;
+    scene.fog.density += Math.sin(fogPulse * 2) * 0.002;
+}
+
+function updateJumpScares(delta) {
+    jumpTimer += delta;
+    
+    if (jumpTimer > 15 + Math.random() * 15 && wolves.length > 0) {
+        jumpTimer = 0;
+        
+        // Random chance for jump scare
+        if (Math.random() < 0.3) {
+            // Flash a wolf's eyes
+            const randomWolf = wolves[Math.floor(Math.random() * wolves.length)];
+            if (randomWolf && randomWolf.eyeL && randomWolf.eyeR) {
+                randomWolf.eyeL.material.emissiveIntensity = 2.0;
+                randomWolf.eyeR.material.emissiveIntensity = 2.0;
+                
+                setTimeout(() => {
+                    if (randomWolf.eyeL && randomWolf.eyeR) {
+                        randomWolf.eyeL.material.emissiveIntensity = 0.6;
+                        randomWolf.eyeR.material.emissiveIntensity = 0.6;
+                    }
+                }, 200);
+                
+                showDialogue("A wolf howls in the distance...");
+            }
+        }
+    }
+}
+
+// ===============================
+// 8. UI & HUD
+// ===============================
+function setupHUD() {
+    // Remove existing HUD if any
+    const existingHUD = document.getElementById('game-hud');
+    if (existingHUD) existingHUD.remove();
+    
+    // Create HUD container
+    const hud = document.createElement('div');
+    hud.id = 'game-hud';
+    hud.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+        font-family: Arial, sans-serif;
+        color: white;
+        text-shadow: 1px 1px 2px black;
+    `;
+    
+    // Health bar
+    hud.innerHTML += `
+        <div id="health-display" style="position: absolute; top: 20px; left: 20px; font-size: 20px;">
+            ❤️ Health: ${player.health}
+        </div>
+    `;
+    
+    // Stamina bar
+    hud.innerHTML += `
+        <div id="stamina-display" style="position: absolute; top: 50px; left: 20px; font-size: 20px;">
+            ⚡ Stamina: ${Math.round(stamina)}
+        </div>
+    `;
+    
+    // Battery display
+    hud.innerHTML += `
+        <div id="battery-display" style="position: absolute; top: 80px; left: 20px; font-size: 20px;">
+            🔦 Battery: ${Math.round(player.battery)}%
+        </div>
+    `;
+    
+    // Fear display
+    hud.innerHTML += `
+        <div id="fear-display" style="position: absolute; top: 110px; left: 20px; font-size: 20px;">
+            😨 Fear: ${Math.round(fear)}
+        </div>
+    `;
+    
+    // Inventory display
+    hud.innerHTML += `
+        <div id="inventory-display" style="position: absolute; bottom: 20px; left: 20px; font-size: 16px;">
+            Inventory: Medkits(${inventory.medkits}) Batteries(${inventory.batteries})
+        </div>
+    `;
+    
+    // Coordinates display
+    hud.innerHTML += `
+        <div id="coord-display" style="position: absolute; top: 20px; right: 20px; font-size: 16px; text-align: right;">
+            Coordinates
+        </div>
+    `;
+    
+    // Dialogue container
+    hud.innerHTML += `
+        <div id="dialogue-container" style="
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            display: none;
+            text-align: center;
+            font-size: 18px;
+        ">
+        </div>
+    `;
+    
+    // Damage flash overlay
+    hud.innerHTML += `
+        <div id="damage-flash" style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,0,0,0);
+            pointer-events: none;
+            transition: background 0.3s;
+        ">
+        </div>
+    `;
+    
+    document.body.appendChild(hud);
+}
+
+function updateHUD() {
+    // Health
+    const healthEl = document.getElementById('health-display');
+    if (healthEl) {
+        healthEl.innerHTML = `❤️ Health: ${Math.max(0, Math.round(player.health))}`;
+        healthEl.style.color = player.health < 30 ? 'red' : 'white';
+    }
+    
+    // Stamina
+    const staminaEl = document.getElementById('stamina-display');
+    if (staminaEl) {
+        staminaEl.innerHTML = `⚡ Stamina: ${Math.round(stamina)}`;
+        staminaEl.style.color = stamina < 20 ? 'orange' : 'white';
+    }
+    
+    // Battery
+    const batteryEl = document.getElementById('battery-display');
+    if (batteryEl) {
+        batteryEl.innerHTML = `🔦 Battery: ${Math.round(player.battery)}%`;
+        batteryEl.style.color = player.battery < 20 ? 'yellow' : 'white';
+    }
+    
+    // Fear
+    const fearEl = document.getElementById('fear-display');
+    if (fearEl) {
+        fearEl.innerHTML = `😨 Fear: ${Math.round(fear)}`;
+        fearEl.style.color = fear > 70 ? 'purple' : 'white';
+    }
+    
+    // Inventory
+    const inventoryEl = document.getElementById('inventory-display');
+    if (inventoryEl) {
+        inventoryEl.innerHTML = `Inventory: Medkits(${inventory.medkits}) Batteries(${inventory.batteries})`;
+    }
+    
+    // Coordinates
+    const coordEl = document.getElementById('coord-display');
+    if (coordEl && controls && controls.getObject) {
+        const pos = controls.getObject().position;
+        coordEl.innerHTML = `X: ${pos.x.toFixed(1)}<br>Y: ${pos.y.toFixed(1)}<br>Z: ${pos.z.toFixed(1)}`;
+    }
+}
+
+function showDamageFlash() {
+    const flashEl = document.getElementById('damage-flash');
+    if (flashEl) {
+        flashEl.style.background = 'rgba(255,0,0,0.3)';
+        setTimeout(() => {
+            flashEl.style.background = 'rgba(255,0,0,0)';
+        }, 300);
+    }
+}
+
+function showDialogue(text) {
+    const dialogueEl = document.getElementById('dialogue-container');
+    if (dialogueEl) {
+        dialogueEl.textContent = text;
+        dialogueEl.style.display = 'block';
+        dialogueTimer = 4; // Show for 4 seconds
+    }
+}
+
+function updateDialogue(delta) {
+    if (dialogueTimer > 0) {
+        dialogueTimer -= delta;
+        if (dialogueTimer <= 0) {
+            const dialogueEl = document.getElementById('dialogue-container');
+            if (dialogueEl) {
+                dialogueEl.style.display = 'none';
+            }
+        }
+    }
+}
+
+// ===============================
+// 9. CUTSCENES
+// ===============================
+function startFieldTripCutscene() {
+    cutsceneActive = true;
+    
+    // Reset camera position for cutscene
+    camera.position.set(0, 1.7, 10);
+    camera.lookAt(0, 1.7, 0);
+    
+    showDialogue("You wake up in the forest... Your classmates are gone.");
+    
+    // End cutscene after 5 seconds
+    setTimeout(() => {
+        cutsceneActive = false;
+        showDialogue("Find your way out. Watch for wolves. Use F for flashlight.");
+    }, 5000);
+}
+
+function triggerEnding(type) {
+    cutsceneActive = true;
+    
+    // Create ending overlay
+    const endingOverlay = document.createElement('div');
+    endingOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 36px;
+        text-align: center;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 3s;
+    `;
+    
+    let endingText = "";
+    switch(type) {
+        case "good":
+            endingText = "GOOD ENDING\nYou and your classmates survived!";
+            break;
+        case "bad":
+            endingText = "BAD ENDING\nYou didn't make it out...";
+            break;
+        case "secret":
+            endingText = "SECRET ENDING\nYou discovered the forest's secrets!";
+            break;
+    }
+    
+    endingOverlay.textContent = endingText;
+    document.body.appendChild(endingOverlay);
+    
+    // Fade in
+    setTimeout(() => {
+        endingOverlay.style.opacity = "1";
+    }, 100);
+    
+    // After 5 seconds, restart
+    setTimeout(() => {
+        location.reload();
+    }, 8000);
+}
+
+// ===============================
+// 10. MAIN GAME LOOP
+// ===============================
+function animate() {
+    requestAnimationFrame(animate);
+    const delta = Math.min(clock.getDelta(), 0.1); // Cap delta for stability
+    
+    // Update game time
+    gameTime += delta;
+    
+    // Only update game logic if not in cutscene
+    if (!cutsceneActive && controls.isLocked) {
+        // Player systems
+        updatePlayerMovement(delta);
+        updateFlashlight(delta);
+        
+        // Wolf systems
+        updateWolves(delta);
+        updateTimedWolfEvents();
+        
+        // Environment systems
+        updateFearSystem(delta);
+        updateJumpScares(delta);
+        
+        // Check for death
+        if (player.health <= 0) {
+            player.health = 0;
+            triggerEnding("bad");
+        }
+        
+        // Check story triggers
+        checkStoryTriggers();
+    }
+    
+    // Always update these
+    updateHUD();
+    updateDialogue(delta);
+    
+    // Render scene
+    renderer.render(scene, camera);
+}
+
+// ===============================
+// WINDOW RESIZE
+// ===============================
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
 // ===============================
 // START GAME
-startFieldTripCutscene();
-animate();
-
 // ===============================
-// DEBUG CONFIRM
-console.log("PART 19 LOADED: Game loop, story triggers, event scheduling active");
-/* =========================================================
-   PART 20 / 20
-   INVENTORY USAGE, CRAFTING & FINAL INTEGRATION
-========================================================= */
-
-// ===============================
-// INVENTORY USAGE KEYS
-// ===============================
-document.addEventListener("keydown", e => {
-  if (!controls.isLocked) return;
-
-  // Use Battery Pack
-  if (e.code === "KeyB" && inventory["Battery Pack"] > 0) {
-    flashlightBattery = Math.min(flashlightBattery + 50, 100);
-    inventory["Battery Pack"]--;
-    updateHUD();
-    showDialogue([{text:"Used Battery Pack", action:()=>{}}]);
-  }
-
-  // Use Medkit
-  if (e.code === "KeyH" && inventory["Medkit"] > 0) {
-    player.health = Math.min(player.health + 30, 100);
-    inventory["Medkit"]--;
-    updateHUD();
-    showDialogue([{text:"Used Medkit", action:()=>{}}]);
-  }
-
-  // Craft Survival Kit
-  if (e.code === "KeyC") craftItem();
+// Wait for page to load
+window.addEventListener('DOMContentLoaded', () => {
+    init();
+    animate();
+    console.log("Game started! Click to begin.");
 });
-
-// ===============================
-// SHOW SHORT DIALOGUE
-function showDialogue(messages) {
-  if (!messages || messages.length === 0) return;
-  showChoices(messages);
-}
-
-// ===============================
-// FINAL DEBUG CONFIRM
-console.log("PART 20 LOADED: Inventory usage, crafting, keybindings ready");
-console.log("5000-LINE SCRIPT STRUCTURE COMPLETE (20 PARTS)");
-
-
