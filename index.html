@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Ears of the Forest</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ears of the Forest</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- FPS Lock Instructions -->
+  <!-- BLOCKER OVERLAY FOR POINTER LOCK -->
   <div id="blocker">
     <div id="instructions">
-      Click to start and lock mouse for first-person control
+      Click to start and lock mouse for first-person
     </div>
   </div>
 
@@ -18,14 +19,17 @@
     <div id="health">Health: 100</div>
     <div id="battery">Flashlight: 100%</div>
     <div id="inventoryBox">Inventory:</div>
-    <div id="choiceContainer"></div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/examples/js/controls/PointerLockControls.js"></script>
-  
-  <!-- Main Game Script -->
+  <!-- Dialogue choices -->
+  <div id="choiceContainer"></div>
+
+  <!-- Three.js scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/controls/PointerLockControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <!-- Game script -->
   <script src="script.js"></script>
 </body>
 </html>
