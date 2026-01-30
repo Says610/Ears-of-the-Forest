@@ -3,329 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ears of the Forest - Survival Horror</title>
+    <title>ECHOES OF THE FOREST - Living Memory Survival Horror</title>
+    <meta name="description" content="A forest that remembers. A story that changes. An AI that learns from you.">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inconsolata:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loader-container">
-            <div class="loader"></div>
-            <div class="loader-inner"></div>
+    <div id="loading-screen" class="screen-visible">
+        <div class="neural-grid">
+            <div class="neural-node" style="--delay:0"></div>
+            <div class="neural-node" style="--delay:0.2"></div>
+            <div class="neural-node" style="--delay:0.4"></div>
+            <div class="neural-node" style="--delay:0.6"></div>
+            <div class="neural-node" style="--delay:0.8"></div>
         </div>
-        <h1 class="game-title">EARS OF THE FOREST</h1>
-        <p class="game-subtitle">A Survival Horror Experience</p>
-        
-        <div class="loading-progress">
-            <div class="progress-bar" id="progress-bar"></div>
+        <div class="loading-content">
+            <h1 class="glitch-title" data-text="ECHOES">ECHOES</h1>
+            <div class="subtitle-glitch">OF THE FOREST</div>
+            <div class="loading-progress-container">
+                <div class="progress-background"></div>
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-text" id="progress-text">Initializing neural network...</div>
+            </div>
+            <div class="memory-fragment-preview">
+                <div class="fragment-quote" id="fragment-quote">"The trees remember what the ground forgets."</div>
+                <div class="fragment-progress">Memory Integrity: <span id="memory-integrity">0%</span></div>
+            </div>
+            <button id="emergency-skip" class="neuro-btn danger" style="display: none;">
+                <i class="fas fa-bolt"></i> Neural Bypass
+            </button>
         </div>
-        
-        <div class="loading-text" id="loading-text">Initializing...</div>
-        <div class="loading-tip" id="loading-tip"></div>
-        
-        <!-- EMERGENCY SKIP BUTTON -->
-        <button id="emergency-skip-btn" style="
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            margin-top: 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
-            font-weight: bold;
-            display: none;
-            animation: pulse 1.5s infinite;
-        ">⚠️ EMERGENCY SKIP ⚠️</button>
-        
-        <style>
-            @keyframes pulse {
-                0% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.7); }
-                50% { box-shadow: 0 0 40px rgba(255, 0, 0, 1); }
-                100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.7); }
-            }
-        </style>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen-hidden">
+        <div class="menu-background">
+            <div class="forest-layers">
+                <div class="layer front"></div>
+                <div class="layer mid"></div>
+                <div class="layer back"></div>
+            </div>
+        </div>
+        <div class="menu-content">
+            <div class="title-container">
+                <h1 class="main-title glitch" data-text="ECHOES">ECHOES</h1>
+                <div class="title-sub">OF THE FOREST</div>
+                <div class="title-tagline">A Living Memory Experience</div>
+            </div>
+            <div class="menu-options">
+                <button class="neuro-option" id="new-game-btn">
+                    <div class="neuro-glow"></div>
+                    <i class="fas fa-seedling"></i>
+                    <div class="option-content">
+                        <div class="option-text">NEW JOURNEY</div>
+                        <div class="option-sub">Generate unique forest</div>
+                    </div>
+                </button>
+                <button class="neuro-option" id="continue-btn" disabled>
+                    <div class="neuro-glow"></div>
+                    <i class="fas fa-play-circle"></i>
+                    <div class="option-content">
+                        <div class="option-text">CONTINUE MEMORY</div>
+                        <div class="option-sub">Resume neural pattern</div>
+                    </div>
+                </button>
+                <button class="neuro-option" id="settings-btn">
+                    <div class="neuro-glow"></div>
+                    <i class="fas fa-cog"></i>
+                    <div class="option-content">
+                        <div class="option-text">NEURAL SETTINGS</div>
+                        <div class="option-sub">Configure consciousness</div>
+                    </div>
+                </button>
+                <button class="neuro-option" id="credits-btn">
+                    <div class="neuro-glow"></div>
+                    <i class="fas fa-users"></i>
+                    <div class="option-content">
+                        <div class="option-text">CREDITS</div>
+                        <div class="option-sub">Development team</div>
+                    </div>
+                </button>
+            </div>
+            <div class="menu-footer">
+                <div class="version">Neural Build v2.0.1</div>
+                <div class="controls-hint">
+                    <kbd>WASD</kbd> Move • <kbd>Mouse</kbd> Look • <kbd>E</kbd> Interact • <kbd>ESC</kbd> Menu
+                </div>
+                <div class="ai-status">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Status: <span id="menu-ai-status">Ready</span></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Game Canvas -->
     <canvas id="gameCanvas"></canvas>
 
     <!-- Game UI -->
-    <div id="game-ui" style="display: none;">
+    <div id="game-ui" class="screen-hidden">
+        <!-- Neural HUD -->
+        <div class="neural-hud">
+            <div class="hud-section">
+                <div class="hud-title">FOREST MEMORY</div>
+                <div class="neural-activity">
+                    <div class="activity-bar" id="memory-activity"></div>
+                    <div class="activity-value" id="memory-value">0%</div>
+                </div>
+            </div>
+            <div class="hud-section">
+                <div class="hud-title">AI LEARNING</div>
+                <div class="learning-progress">
+                    <div class="progress-circle" id="learning-circle">
+                        <div class="circle-value">0%</div>
+                    </div>
+                    <div class="learning-type" id="learning-type">Exploring</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sound Compass -->
+        <div class="sound-compass" id="sound-compass">
+            <div class="compass-base"></div>
+            <div class="compass-needle"></div>
+            <div class="compass-label">AUDIO NAVIGATION</div>
+        </div>
+
+        <!-- Memory Fragments -->
+        <div class="memory-fragments-hud">
+            <div class="fragments-title">RECOVERED MEMORIES</div>
+            <div class="fragments-grid" id="fragments-grid"></div>
+            <div class="fragment-tip" id="fragment-tip">Listen for whispers...</div>
+        </div>
+
         <!-- Stats Panel -->
-        <div class="stats-panel">
-            <div class="stat">
-                <div class="stat-icon">❤️</div>
-                <div class="stat-info">
-                    <div class="stat-name">HEALTH</div>
-                    <div class="stat-bar">
-                        <div class="stat-fill health-bar" id="health-bar"></div>
-                    </div>
+        <div class="dynamic-stats">
+            <div class="stat-item" data-stat="sanity">
+                <div class="stat-icon"><i class="fas fa-brain"></i></div>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="sanity-bar"></div>
                 </div>
-                <div class="stat-value" id="health-value">100</div>
+                <div class="stat-value" id="sanity-value">100%</div>
             </div>
-            <div class="stat">
-                <div class="stat-icon">🍎</div>
-                <div class="stat-info">
-                    <div class="stat-name">HUNGER</div>
-                    <div class="stat-bar">
-                        <div class="stat-fill hunger-bar" id="hunger-bar"></div>
-                    </div>
+            <div class="stat-item" data-stat="connection">
+                <div class="stat-icon"><i class="fas fa-link"></i></div>
+                <div class="stat-bar">
+                    <div class="stat-fill" id="connection-bar"></div>
                 </div>
-                <div class="stat-value" id="hunger-value">100</div>
+                <div class="stat-value" id="connection-value">0%</div>
             </div>
-            <div class="stat">
-                <div class="stat-icon">💧</div>
-                <div class="stat-info">
-                    <div class="stat-name">THIRST</div>
-                    <div class="stat-bar">
-                        <div class="stat-fill thirst-bar" id="thirst-bar"></div>
-                    </div>
-                </div>
-                <div class="stat-value" id="thirst-value">100</div>
-            </div>
-            <div class="stat">
-                <div class="stat-icon">🌡️</div>
-                <div class="stat-info">
-                    <div class="stat-name">TEMP</div>
-                    <div class="stat-bar">
-                        <div class="stat-fill temp-bar" id="temp-bar"></div>
-                    </div>
-                </div>
-                <div class="stat-value" id="temp-value">37°C</div>
-            </div>
-            <div class="stat">
-                <div class="stat-icon">⚡</div>
-                <div class="stat-info">
-                    <div class="stat-name">STAMINA</div>
-                    <div class="stat-bar">
-                        <div class="stat-fill stamina-bar" id="stamina-bar"></div>
-                    </div>
-                </div>
-                <div class="stat-value" id="stamina-value">100</div>
-            </div>
-            <div class="stat">
-                <div class="stat-icon">😨</div>
-                <div class="stat-info">
-                    <div class="stat-name">FEAR</div>
-                    <div class="stat-bar">
-                        <div class="stat-fill fear-bar" id="fear-bar"></div>
-                    </div>
-                </div>
-                <div class="stat-value" id="fear-value">5</div>
-            </div>
-        </div>
-
-        <!-- Inventory Panel -->
-        <div class="inventory-panel">
-            <div class="inventory-title">INVENTORY</div>
-            <div class="inventory-item">
-                <span>🔦 Battery:</span>
-                <span class="item-count" id="inventory-battery">100%</span>
-            </div>
-            <div class="inventory-item">
-                <span>💊 Medkits:</span>
-                <span class="item-count" id="inventory-medkits">1</span>
-            </div>
-            <div class="inventory-item">
-                <span>🔋 Batteries:</span>
-                <span class="item-count" id="inventory-batteries">2</span>
-            </div>
-            <div class="inventory-item">
-                <span>🍓 Berries:</span>
-                <span class="item-count" id="inventory-berries">0</span>
-            </div>
-            <div class="inventory-item">
-                <span>🍄 Mushrooms:</span>
-                <span class="item-count" id="inventory-mushrooms">0</span>
-            </div>
-            <div class="inventory-item">
-                <span>🪵 Sticks:</span>
-                <span class="item-count" id="inventory-sticks">0</span>
-            </div>
-        </div>
-
-        <!-- Controls Hint -->
-        <div id="controls-hint">
-            WASD: Move | Mouse: Look | Shift: Sprint | C: Crouch | F: Flashlight | 
-            E: Interact | M: Eat Mushroom | N: Eat Berries | R: Drink | H: Heal | B: Battery | ESC: Pause
         </div>
 
         <!-- Crosshair -->
-        <div class="crosshair">
+        <div class="context-crosshair">
             <div class="crosshair-dot"></div>
-        </div>
-
-        <!-- Message Log -->
-        <div class="message-log" id="message-log"></div>
-
-        <!-- Notification -->
-        <div class="notification" id="notification">
-            <div class="notification-text" id="notification-text"></div>
+            <div class="crosshair-context" id="crosshair-context"></div>
         </div>
     </div>
 
-    <!-- Visual Effects -->
-    <div class="damage-flash" id="damage-flash"></div>
-    <div class="fear-overlay" id="fear-overlay"></div>
-    <div class="vignette"></div>
-    <div class="breathing-effect"></div>
-    
-    <!-- Jump Scare -->
-    <div class="jump-scare" id="jump-scare">
-        <div class="jump-scare-content">⚠️</div>
-    </div>
-
-    <!-- Cutscenes -->
-    <div class="cutscene" id="cutscene-start">
-        <div class="cutscene-title">THE BEGINNING</div>
-        <div class="cutscene-text">
-            "This school trip is going to be awesome!" you said to your friend.<br>
-            You both were excited to explore the ancient forest...<br><br>
-            But now, the sun is setting, and you're lost.<br>
-            The sounds of the forest are changing...
-        </div>
-        <div class="cutscene-subtext">
-            Find your way out before it's too late.
-        </div>
-        <div class="cutscene-skip">Press ESC to skip</div>
-    </div>
-
-    <div class="cutscene" id="cutscene-good">
-        <div class="cutscene-title">GOOD ENDING</div>
-        <div class="cutscene-text">
-            You made it out alive!<br><br>
-            You and your friend celebrate at home,<br>
-            grateful to have survived the nightmare forest.<br>
-            You'll never forget what you saw...
-        </div>
-        <div class="cutscene-subtext">
-            But at least you made it out together.
+    <!-- Memory Interface -->
+    <div id="memory-interface" class="screen-hidden">
+        <div class="memory-container">
+            <div class="memory-header">
+                <div class="memory-title" id="memory-title">MEMORY FRAGMENT</div>
+                <div class="memory-subtitle" id="memory-subtitle">Recovering...</div>
+            </div>
+            <div class="memory-viewport">
+                <div class="memory-scene" id="memory-scene">
+                    <div class="scene-text" id="scene-text"></div>
+                </div>
+            </div>
+            <div class="memory-narrative">
+                <div class="narrative-text" id="narrative-text">The memory is fragmented. Focus to reconstruct...</div>
+                <div class="narrative-progress">
+                    <div class="progress-bar" id="narrative-progress"></div>
+                    <div class="progress-text">Clarity: <span id="clarity-value">0%</span></div>
+                </div>
+            </div>
+            <div class="memory-controls">
+                <button class="memory-btn" id="memory-exit">
+                    <i class="fas fa-times"></i> Exit Memory
+                </button>
+            </div>
         </div>
     </div>
-
-    <div class="cutscene" id="cutscene-bad">
-        <div class="cutscene-title">BAD ENDING</div>
-        <div class="cutscene-text">
-            The wolves were too many...<br><br>
-            They surrounded you and your friend.<br>
-            The last thing you heard were the screams...<br>
-            The forest claimed more victims.
-        </div>
-        <div class="cutscene-subtext">
-            The forest's hunger is never satisfied.
-        </div>
-    </div>
-
-    <div class="cutscene" id="cutscene-secret">
-        <div class="cutscene-title">SECRET ENDING</div>
-        <div class="cutscene-text">
-            You found the Heartseed Tree...<br><br>
-            It spoke to you, showed you the forest's memories.<br>
-            You felt its pain, its loneliness.<br>
-            Slowly, you became one with the forest...
-        </div>
-        <div class="cutscene-subtext">
-            Now you watch over it, forever.
-        </div>
-    </div>
-
-    <!-- Audio Toggle -->
-    <button id="audio-toggle">🔊</button>
 
     <!-- Pause Menu -->
-    <div class="pause-menu" id="pause-menu">
-        <h1 class="pause-title">PAUSED</h1>
-        <button class="pause-button" id="resume-btn">RESUME</button>
-        <button class="pause-button secondary" id="restart-btn">RESTART</button>
-        <button class="pause-button secondary" id="menu-btn">MAIN MENU</button>
+    <div id="pause-menu" class="screen-hidden">
+        <div class="pause-container">
+            <h1 class="pause-title"><i class="fas fa-pause-circle"></i> NEURAL PAUSE</h1>
+            <div class="pause-stats-grid">
+                <div class="pause-stat">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-name">TIME IN MEMORY</div>
+                        <div class="stat-value" id="pause-time">00:00</div>
+                    </div>
+                </div>
+                <div class="pause-stat">
+                    <div class="stat-icon"><i class="fas fa-brain"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-name">NEURAL CONNECTIONS</div>
+                        <div class="stat-value" id="pause-neural">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="pause-options">
+                <button class="pause-option" id="pause-resume">
+                    <i class="fas fa-play"></i> Resume Memory
+                </button>
+                <button class="pause-option" id="pause-settings">
+                    <i class="fas fa-cog"></i> Neural Settings
+                </button>
+                <button class="pause-option" id="pause-quit">
+                    <i class="fas fa-sign-out-alt"></i> Exit to Menu
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- End Screen -->
-    <div class="end-screen" id="end-screen">
-        <h1 class="end-title" id="end-title"></h1>
-        <div class="end-message" id="end-message"></div>
-        <div class="end-stats" id="end-stats"></div>
-        <button class="end-button" id="end-restart-btn">PLAY AGAIN</button>
-        <button class="end-button secondary" id="end-menu-btn">MAIN MENU</button>
-    </div>
-
-    <!-- Import Three.js -->
+    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
     <!-- Main Game Script -->
     <script src="script.js"></script>
-    
-    <!-- EMERGENCY SCRIPT - THIS ALWAYS RUNS -->
-    <script>
-        // EMERGENCY LOADING FIX - RUNS NO MATTER WHAT
-        console.log("🚨 Emergency script loaded!");
-        
-        // Show emergency button after 5 seconds
-        setTimeout(function() {
-            console.log("Showing emergency button...");
-            const emergencyBtn = document.getElementById('emergency-skip-btn');
-            if (emergencyBtn) {
-                emergencyBtn.style.display = 'block';
-                
-                // Make button WORK
-                emergencyBtn.onclick = function() {
-                    console.log("EMERGENCY SKIP ACTIVATED!");
-                    
-                    // Hide loading screen
-                    document.getElementById('loading-screen').style.display = 'none';
-                    
-                    // Show game elements
-                    document.getElementById('gameCanvas').style.display = 'block';
-                    document.getElementById('game-ui').style.display = 'block';
-                    
-                    // Show notification
-                    const notification = document.getElementById('notification');
-                    const notificationText = document.getElementById('notification-text');
-                    if (notification && notificationText) {
-                        notificationText.textContent = "Emergency mode: Some features may be limited";
-                        notification.classList.add('show');
-                        setTimeout(() => notification.classList.remove('show'), 3000);
-                    }
-                    
-                    // Try to start game if window.game exists
-                    if (window.game && typeof window.game.startGame === 'function') {
-                        window.game.startGame();
-                    } else {
-                        // Create minimal game
-                        try {
-                            if (typeof THREE !== 'undefined') {
-                                const canvas = document.getElementById('gameCanvas');
-                                const scene = new THREE.Scene();
-                                const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-                                const renderer = new THREE.WebGLRenderer({canvas: canvas});
-                                renderer.setSize(window.innerWidth, window.innerHeight);
-                                scene.background = new THREE.Color(0x001a00);
-                                
-                                // Add a cube to show it's working
-                                const cube = new THREE.Mesh(
-                                    new THREE.BoxGeometry(1, 1, 1),
-                                    new THREE.MeshBasicMaterial({color: 0x4CAF50})
-                                );
-                                scene.add(cube);
-                                camera.position.z = 5;
-                                
-                                function animate() {
-                                    requestAnimationFrame(animate);
-                                    cube.rotation.x += 0.01;
-                                    cube.rotation.y += 0.01;
-                                    renderer.render(scene, camera);
-                                }
-                                animate();
-                            }
-                        } catch(e) {
-                            console.error("Emergency Three.js failed:", e);
-                        }
-                    }
-                };
-            }
-        }, 5000); // Show after 5 seconds
-    </script>
 </body>
 </html>
