@@ -1,111 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>EARS OF THE FOREST</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inconsolata:wght@400;700&display=swap" rel="stylesheet">
-  <!-- FontAwesome (icons) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Styles (your existing style.css) -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Echoes of the Forest 3D</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Loading Screen -->
-  <div id="loading-screen" class="screen-visible">
-    <div class="neural-grid"></div>
-    <div class="loading-content">
-      <h1 class="glitch-title" data-text="EARS">EARS</h1>
-      <div class="subtitle-glitch">OF THE FOREST</div>
-      <div class="loading-progress-container">
-        <div class="progress-background"></div>
-        <div class="progress-fill" id="progress-fill"></div>
-        <div class="progress-text" id="progress-text">Initializing neural network...</div>
-      </div>
-      <div class="memory-fragment-preview">
-        <div class="fragment-quote" id="fragment-quote">"The trees remember what the ground forgets."</div>
-        <div class="fragment-progress">Memory Integrity: <span id="memory-integrity">0%</span></div>
-      </div>
-      <button id="emergency-skip" class="neuro-btn danger" style="display:none"><i class="fas fa-bolt"></i> Neural Bypass</button>
+  <div id="hud">
+    <div id="stats">
+      <p>Hunger: <span id="hunger">100</span>%</p>
+      <p>Thirst: <span id="thirst">100</span>%</p>
+      <p>Temp: <span id="temperature">37</span>°C</p>
+      <p>Stamina: <span id="stamina">100</span>%</p>
     </div>
+    <div id="messages"></div>
   </div>
-
-  <!-- Main Menu -->
-  <div id="main-menu" class="screen-hidden">
-    <div class="menu-background"><div class="forest-layers"><div class="layer front"></div><div class="layer mid"></div><div class="layer back"></div></div></div>
-    <div class="menu-content">
-      <div class="title-container">
-        <h1 class="main-title glitch" data-text="EARS">EARS</h1>
-        <div class="title-sub">OF THE FOREST</div>
-        <div class="title-tagline">A Living Memory Experience</div>
-      </div>
-      <div class="menu-options">
-        <button class="neuro-option" id="new-game-btn"><div class="neuro-glow"></div><i class="fas fa-seedling"></i><div class="option-content"><div class="option-text">NEW JOURNEY</div><div class="option-sub">Generate unique forest</div></div></button>
-        <button class="neuro-option" id="continue-btn" disabled><div class="neuro-glow"></div><i class="fas fa-play-circle"></i><div class="option-content"><div class="option-text">CONTINUE MEMORY</div><div class="option-sub">Resume neural pattern</div></div></button>
-        <button class="neuro-option" id="settings-btn"><div class="neuro-glow"></div><i class="fas fa-cog"></i><div class="option-content"><div class="option-text">NEURAL SETTINGS</div><div class="option-sub">Configure consciousness</div></div></button>
-      </div>
-      <div class="menu-footer"><div class="version">Neural Build v2.0.1</div><div class="controls-hint"><kbd>WASD</kbd> Move • <kbd>Mouse</kbd> Look • <kbd>E</kbd> Interact • <kbd>ESC</kbd> Menu</div><div class="ai-status"><i class="fas fa-brain"></i><span>AI Status: <span id="menu-ai-status">Ready</span></span></div></div>
-    </div>
-  </div>
-
-  <!-- Game Canvas -->
   <canvas id="gameCanvas"></canvas>
-
-  <!-- Game UI -->
-  <div id="game-ui" class="screen-hidden">
-    <div class="neural-hud">
-      <div class="hud-section">
-        <div class="hud-title">FOREST MEMORY</div>
-        <div class="neural-activity"><div class="activity-bar" id="memory-activity"></div><div class="activity-value" id="memory-value">0%</div></div>
-      </div>
-      <div class="hud-section">
-        <div class="hud-title">AI LEARNING</div>
-        <div class="learning-progress"><div class="progress-circle" id="learning-circle"><div class="circle-value">0%</div></div><div class="learning-type" id="learning-type">Exploring</div></div>
-      </div>
-    </div>
-
-    <div class="sound-compass" id="sound-compass"><div class="compass-base"></div><div class="compass-needle"></div><div class="compass-label">AUDIO NAVIGATION</div></div>
-
-    <div class="memory-fragments-hud">
-      <div class="fragments-title">RECOVERED MEMORIES</div>
-      <div class="fragments-grid" id="fragments-grid"></div>
-      <div class="fragment-tip" id="fragment-tip">Listen for whispers...</div>
-    </div>
-
-    <div class="dynamic-stats">
-      <div class="stat-item" data-stat="sanity"><div class="stat-icon"><i class="fas fa-brain"></i></div><div class="stat-bar"><div class="stat-fill" id="sanity-bar"></div></div><div class="stat-value" id="sanity-value">100%</div></div>
-      <div class="stat-item" data-stat="connection"><div class="stat-icon"><i class="fas fa-link"></i></div><div class="stat-bar"><div class="stat-fill" id="connection-bar"></div></div><div class="stat-value" id="connection-value">0%</div></div>
-    </div>
-
-    <div class="context-crosshair"><div class="crosshair-dot"></div><div class="crosshair-context" id="crosshair-context"></div></div>
-  </div>
-
-  <!-- Memory Interface -->
-  <div id="memory-interface" class="screen-hidden">
-    <div class="memory-container">
-      <div class="memory-header"><div class="memory-title" id="memory-title">MEMORY FRAGMENT</div><div class="memory-subtitle" id="memory-subtitle">Recovering...</div></div>
-      <div class="memory-viewport"><div class="memory-scene" id="memory-scene"><div class="scene-text" id="scene-text"></div></div></div>
-      <div class="memory-narrative"><div class="narrative-text" id="narrative-text">The memory is fragmented. Focus to reconstruct...</div><div class="narrative-progress"><div class="progress-bar" id="narrative-progress"></div><div class="progress-text">Clarity: <span id="clarity-value">0%</span></div></div></div>
-      <div class="memory-controls"><button class="memory-btn" id="memory-exit"><i class="fas fa-times"></i> Exit Memory</button></div>
-    </div>
-  </div>
-
-  <!-- Pause Menu -->
-  <div id="pause-menu" class="screen-hidden">
-    <div class="pause-container">
-      <h1 class="pause-title"><i class="fas fa-pause-circle"></i> NEURAL PAUSE</h1>
-      <div class="pause-stats-grid">
-        <div class="pause-stat"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-info"><div class="stat-name">TIME IN MEMORY</div><div class="stat-value" id="pause-time">00:00</div></div></div>
-        <div class="pause-stat"><div class="stat-icon"><i class="fas fa-brain"></i></div><div class="stat-info"><div class="stat-name">NEURAL CONNECTIONS</div><div class="stat-value" id="pause-neural">0</div></div></div>
-      </div>
-      <div class="pause-options"><button class="pause-option" id="pause-resume"><i class="fas fa-play"></i> Resume Memory</button><button class="pause-option" id="pause-settings"><i class="fas fa-cog"></i> Neural Settings</button><button class="pause-option" id="pause-quit"><i class="fas fa-sign-out-alt"></i> Exit to Menu</button></div>
-    </div>
-  </div>
-
-  <!-- Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Main Game Script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r153/three.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
