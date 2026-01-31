@@ -2,6 +2,68 @@
 // ECHOES OF THE FOREST - GAME SCRIPT
 // ============================================
 
+// 🔧 AUTO-FIX FUNCTIONS
+function fixMenuClickBlocking() {
+    const canvas = document.getElementById('gameCanvas');
+    const screens = document.querySelectorAll('.screen');
+
+    if (canvas) {
+        canvas.style.pointerEvents = 'none'; // disable clicks on canvas in menu
+    }
+
+    screens.forEach(screen => {
+        screen.style.pointerEvents = 'auto'; // enable clicks on UI
+    });
+}
+
+function setInputMode(mode) {
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) return;
+
+    if (mode === 'game') {
+        canvas.style.pointerEvents = 'auto';
+    } else {
+        canvas.style.pointerEvents = 'none';
+    }
+}
+
+function forceMenuButtons() {
+    console.log('Force-enabling menu buttons...');
+    
+    const actions = {
+        'new-game': startNewGame,
+        'continue-game': continueGame,
+        'load-game': showLoadScreen,
+        'settings': showSettingsScreen,
+        'credits': showCreditsScreen,
+        'quit': quitGame
+    };
+
+    Object.keys(actions).forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            console.log(`Setting up button: ${id}`);
+            btn.style.pointerEvents = 'auto';
+            btn.style.cursor = 'pointer';
+            btn.style.position = 'relative';
+            btn.style.zIndex = '1000';
+            
+            // Remove existing listeners and add new one
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', actions[id]);
+            
+            // Make sure button is visible and clickable
+            newBtn.style.opacity = '1';
+            newBtn.style.pointerEvents = 'auto';
+        } else {
+            console.warn(`Button not found: ${id}`);
+        }
+    });
+
+    console.log('Menu buttons force-enabled');
+}
+
 // Game State
 let gameState = {
     isPaused: false,
@@ -100,6 +162,10 @@ const memoryData = [
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing game...');
     
+    // 🔧 APPLY FIXES
+    fixMenuClickBlocking();
+    forceMenuButtons();
+    
     // Show loading screen first
     showScreen('loading');
     
@@ -139,9 +205,47 @@ function simulateLoading() {
                 hideScreen('loading');
                 showScreen('main-menu');
                 console.log('Game ready!');
+                
+                // 🔧 Ensure menu is clickable
+                fixMenuClickBlocking();
+                forceMenuButtons();
             }, 500);
         }
     }, 100);
+}
+
+// ============================================
+// SCREEN MANAGEMENT (FIXED VERSION)
+// ============================================
+
+function showScreen(screenId) {
+    console.log(`Showing screen: ${screenId}`);
+
+    document.querySelectorAll('.screen').forEach(s => {
+        s.classList.add('hidden');
+    });
+
+    const screen = document.getElementById(screenId);
+    if (screen) {
+        screen.classList.remove('hidden');
+        gameState.currentScreen = screenId.replace('-screen', '');
+
+        if (screenId === 'game-screen') {
+            setInputMode('game');
+            startGameLoop();
+        } else {
+            setInputMode('menu');
+        }
+    } else {
+        console.error(`Screen not found: ${screenId}`);
+    }
+}
+
+function hideScreen(screenId) {
+    const screen = document.getElementById(screenId);
+    if (screen) {
+        screen.classList.add('hidden');
+    }
 }
 
 // ============================================
@@ -151,7 +255,7 @@ function simulateLoading() {
 function setupUIListeners() {
     console.log('Setting up UI listeners...');
     
-    // Main Menu buttons
+    // Main Menu buttons (already handled by forceMenuButtons, but add extra safety)
     const newGameBtn = document.getElementById('new-game');
     const continueBtn = document.getElementById('continue-game');
     const loadBtn = document.getElementById('load-game');
@@ -257,33 +361,18 @@ function setupUIListeners() {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('click', handleMouseClick);
     
+    // Pointer lock change
+    document.addEventListener('pointerlockchange', () => {
+        const canvas = document.getElementById('gameCanvas');
+        isMouseLocked = document.pointerLockElement === canvas;
+    });
+    
     console.log('All UI listeners setup complete');
 }
 
 // ============================================
-// SCREEN MANAGEMENT
+// GAME SCREEN FUNCTIONS
 // ============================================
-
-function showScreen(screenId) {
-    console.log(`Showing screen: ${screenId}`);
-    const screen = document.getElementById(screenId);
-    if (screen) {
-        screen.classList.remove('hidden');
-        gameState.currentScreen = screenId.replace('-screen', '');
-        if (screenId === 'game-screen') {
-            startGameLoop();
-        }
-    } else {
-        console.error(`Screen not found: ${screenId}`);
-    }
-}
-
-function hideScreen(screenId) {
-    const screen = document.getElementById(screenId);
-    if (screen) {
-        screen.classList.add('hidden');
-    }
-}
 
 function startNewGame() {
     console.log('Starting new game...');
@@ -312,11 +401,6 @@ function startNewGame() {
         achievements: new Set()
     };
     
-    // Hide all screens
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.add('hidden');
-    });
-    
     // Show game screen
     showScreen('game-screen');
     
@@ -339,25 +423,21 @@ function startNewGame() {
 
 function continueGame() {
     console.log('Continue game clicked');
-    // For now, just start a new game
     startNewGame();
 }
 
 function showLoadScreen() {
     console.log('Show load screen');
-    hideScreen('main-menu');
     showScreen('load-screen');
 }
 
 function showSettingsScreen() {
     console.log('Show settings screen');
-    hideScreen('main-menu');
     showScreen('settings-screen');
 }
 
 function showCreditsScreen() {
     console.log('Show credits screen');
-    hideScreen('main-menu');
     showScreen('credits-screen');
 }
 
@@ -390,20 +470,7 @@ function togglePauseMenu() {
 
 function quitToMainMenu() {
     console.log('Quit to main menu');
-    
-    // Hide all game screens
-    hideScreen('pause-menu');
-    hideScreen('death-screen');
-    hideScreen('win-screen');
-    hideScreen('game-screen');
-    hideScreen('memory-interface');
-    
-    // Show main menu
     showScreen('main-menu');
-    
-    // Reset game state but keep settings
-    gameState.currentScreen = 'menu';
-    gameState.isPaused = false;
 }
 
 function startNewGamePlus() {
@@ -420,17 +487,14 @@ function startNewGamePlus() {
 }
 
 function backToMainMenu() {
-    hideScreen('settings-screen');
     showScreen('main-menu');
 }
 
 function backFromLoadScreen() {
-    hideScreen('load-screen');
     showScreen('main-menu');
 }
 
 function backFromCredits() {
-    hideScreen('credits-screen');
     showScreen('main-menu');
 }
 
@@ -445,14 +509,12 @@ function closeMemoryInterface() {
 
 function useMemory() {
     console.log('Using memory');
-    // Memory usage logic here
     closeMemoryInterface();
 }
 
 function applySettings() {
     console.log('Applying settings');
-    // Settings logic here
-    backToMainMenu();
+    showScreen('main-menu');
 }
 
 function resetSettings() {
@@ -464,7 +526,6 @@ function resetSettings() {
 
 function deleteSave() {
     console.log('Delete save');
-    // Delete save logic here
 }
 
 // ============================================
@@ -708,12 +769,6 @@ function handleMouseClick() {
         }
     }
 }
-
-// Pointer lock change handler
-document.addEventListener('pointerlockchange', function() {
-    const canvas = document.getElementById('gameCanvas');
-    isMouseLocked = document.pointerLockElement === canvas;
-});
 
 function toggleFlashlight() {
     if (player.flashlight) {
@@ -1135,30 +1190,27 @@ function loadSettings() {
 }
 
 // ============================================
-// UTILITY FUNCTIONS
+// DEBUG FUNCTIONS
 // ============================================
 
-function saveGame() {
-    const saveData = {
-        gameState: gameState,
-        timestamp: Date.now()
-    };
-    
-    localStorage.setItem('echoesSave', JSON.stringify(saveData));
-    addMessage('Game saved successfully!');
-}
-
-// Debug function to test the game
-function debugTest() {
+// Export for debugging
+window.debugTest = function() {
     console.log('Debug test running...');
     console.log('Game state:', gameState);
     console.log('Player:', player);
     console.log('Scene:', scene);
     console.log('Camera:', camera);
     console.log('Renderer:', renderer);
-}
+    
+    // Test button functionality
+    const buttons = document.querySelectorAll('button');
+    console.log('Found buttons:', buttons.length);
+    buttons.forEach((btn, i) => {
+        console.log(`Button ${i}:`, btn.id, btn.textContent);
+    });
+};
 
-// Export for debugging
-window.debugTest = debugTest;
 window.gameState = gameState;
 window.player = player;
+window.fixMenuClickBlocking = fixMenuClickBlocking;
+window.forceMenuButtons = forceMenuButtons;
