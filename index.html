@@ -1,562 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Echoes of the Forest</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ears of the Forest</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loader">
-            <div class="forest-loader">
-                <div class="tree"></div>
-                <div class="tree"></div>
-                <div class="tree"></div>
-            </div>
-            <p>Loading Echoes of the Forest...</p>
-            <div class="progress-bar">
-                <div class="progress"></div>
-            </div>
-        </div>
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div class="loading-content">
+      <h1 class="loading-title">EARS OF THE FOREST</h1>
+      <div class="loading-bar-container">
+        <div class="loading-bar"></div>
+      </div>
+      <p class="loading-text">Loading…</p>
     </div>
+  </div>
 
-    <!-- Main Menu -->
-    <div id="main-menu" class="screen">
-        <div class="menu-container">
-            <h1>ECHOES OF THE FOREST</h1>
-            <div class="menu-subtitle">A Survival Horror Experience</div>
-            
-            <div class="menu-options">
-                <button id="new-game" class="menu-btn">
-                    <i class="fas fa-play"></i> New Game
-                </button>
-                <button id="continue-game" class="menu-btn">
-                    <i class="fas fa-history"></i> Continue
-                </button>
-                <button id="load-game" class="menu-btn">
-                    <i class="fas fa-folder-open"></i> Load Game
-                </button>
-                <button id="settings" class="menu-btn">
-                    <i class="fas fa-cog"></i> Settings
-                </button>
-                <button id="credits" class="menu-btn">
-                    <i class="fas fa-info-circle"></i> Credits
-                </button>
-                <button id="quit" class="menu-btn">
-                    <i class="fas fa-power-off"></i> Quit
-                </button>
-            </div>
-            
-            <div class="menu-footer">
-                <div class="version">Version 1.0.0</div>
-                <div class="hint">Use WASD to move • Mouse to look • F for flashlight</div>
-            </div>
-        </div>
+  <!-- MAIN MENU -->
+  <div id="main-menu" class="overlay hidden">
+    <h1 class="menu-title">EARS OF THE FOREST</h1>
+    <button id="new-game-btn">New Game</button>
+    <button id="continue-btn">Continue</button>
+    <button id="load-btn">Load Game</button>
+    <button id="settings-btn">Settings</button>
+    <button id="credits-btn">Credits</button>
+    <button id="quit-btn">Quit</button>
+  </div>
+
+  <!-- INTRO CUTSCENE -->
+  <div id="intro-cutscene" class="overlay hidden">
+    <div class="cutscene-text">
+      <p id="typewriter"></p>
     </div>
+  </div>
 
-    <!-- Intro Cutscene -->
-    <div id="intro-cutscene" class="screen hidden">
-        <div class="cutscene-container">
-            <div class="cutscene-text">
-                <p class="typewriter" id="cutscene-text-1">The school trip was supposed to be educational...</p>
-                <p class="typewriter hidden" id="cutscene-text-2">But the bus broke down in the middle of nowhere.</p>
-                <p class="typewriter hidden" id="cutscene-text-3">"Let's explore the forest while they fix it," someone said.</p>
-                <p class="typewriter hidden" id="cutscene-text-4">I should have stayed with the group.</p>
-                <p class="typewriter hidden" id="cutscene-text-5">Now I'm lost. Alone.</p>
-                <p class="typewriter hidden" id="cutscene-text-6">And the forest... it's watching me.</p>
-            </div>
-            <button id="skip-cutscene" class="skip-btn">
-                <i class="fas fa-forward"></i> Skip
-            </button>
-        </div>
+  <!-- GAME CANVAS (Three.js inserts canvas here) -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-bars">
+      <div class="bar-wrapper"><span class="bar-label">Health</span><div class="bar-bg"><div id="health-bar" class="bar-fill health"></div></div></div>
+      <div class="bar-wrapper"><span class="bar-label">Sanity</span><div class="bar-bg"><div id="sanity-bar" class="bar-fill sanity"></div></div></div>
+      <div class="bar-wrapper"><span class="bar-label">Hunger</span><div class="bar-bg"><div id="hunger-bar" class="bar-fill hunger"></div></div></div>
+      <div class="bar-wrapper"><span class="bar-label">Thirst</span><div class="bar-bg"><div id="thirst-bar" class="bar-fill thirst"></div></div></div>
+      <div class="bar-wrapper"><span class="bar-label">Stamina</span><div class="bar-bg"><div id="stamina-bar" class="bar-fill stamina"></div></div></div>
+      <div class="bar-wrapper"><span class="bar-label">Temp</span><div class="bar-bg"><div id="temp-bar" class="bar-fill temperature"></div></div></div>
     </div>
-
-    <!-- Game Screen -->
-    <div id="game-screen" class="screen hidden">
-        <canvas id="gameCanvas"></canvas>
-        
-        <!-- HUD -->
-        <div id="hud">
-            <!-- Vital Stats -->
-            <div class="hud-section" id="vital-stats">
-                <div class="stat-row">
-                    <div class="stat">
-                        <i class="fas fa-heart"></i>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="health-bar"></div>
-                        </div>
-                        <span class="stat-value" id="health-value">100</span>
-                    </div>
-                    <div class="stat">
-                        <i class="fas fa-brain"></i>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="sanity-bar"></div>
-                        </div>
-                        <span class="stat-value" id="sanity-value">100</span>
-                    </div>
-                </div>
-                <div class="stat-row">
-                    <div class="stat">
-                        <i class="fas fa-hamburger"></i>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="hunger-bar"></div>
-                        </div>
-                        <span class="stat-value" id="hunger-value">100</span>
-                    </div>
-                    <div class="stat">
-                        <i class="fas fa-tint"></i>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="thirst-bar"></div>
-                        </div>
-                        <span class="stat-value" id="thirst-value">100</span>
-                    </div>
-                </div>
-                <div class="stat-row">
-                    <div class="stat">
-                        <i class="fas fa-thermometer-half"></i>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="temp-bar"></div>
-                        </div>
-                        <span class="stat-value" id="temp-value">37°C</span>
-                    </div>
-                    <div class="stat">
-                        <i class="fas fa-running"></i>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="stamina-bar"></div>
-                        </div>
-                        <span class="stat-value" id="stamina-value">100</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Memory Fragments -->
-            <div class="hud-section" id="memory-hud">
-                <div class="section-title">Memory Fragments</div>
-                <div class="fragments-container">
-                    <div class="fragment-slot" data-index="0"></div>
-                    <div class="fragment-slot" data-index="1"></div>
-                    <div class="fragment-slot" data-index="2"></div>
-                    <div class="fragment-slot" data-index="3"></div>
-                    <div class="fragment-slot" data-index="4"></div>
-                    <div class="fragment-slot" data-index="5"></div>
-                    <div class="fragment-slot" data-index="6"></div>
-                    <div class="fragment-slot" data-index="7"></div>
-                    <div class="fragment-slot" data-index="8"></div>
-                    <div class="fragment-slot" data-index="9"></div>
-                    <div class="fragment-slot" data-index="10"></div>
-                    <div class="fragment-slot" data-index="11"></div>
-                </div>
-                <div class="memory-count">0/12</div>
-            </div>
-
-            <!-- Day/Night & Forest Mood -->
-            <div class="hud-section" id="time-mood">
-                <div class="time-container">
-                    <i class="fas fa-clock"></i>
-                    <span id="time-display">12:00</span>
-                    <span id="day-count">Day 1</span>
-                </div>
-                <div class="mood-container">
-                    <div class="mood-label">Forest Mood:</div>
-                    <div class="mood-value" id="forest-mood">Neutral</div>
-                    <div class="mood-bar-container">
-                        <div class="mood-bar" id="mood-bar"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Items -->
-            <div class="hud-section" id="quick-items">
-                <div class="section-title">Inventory</div>
-                <div class="items-grid">
-                    <div class="item-slot active" data-slot="1">
-                        <div class="item-icon"><i class="fas fa-hand"></i></div>
-                        <div class="item-name">Hands</div>
-                    </div>
-                    <div class="item-slot" data-slot="2">
-                        <div class="item-icon"><i class="fas fa-fire"></i></div>
-                        <div class="item-name">Campfire Kit</div>
-                    </div>
-                    <div class="item-slot" data-slot="3">
-                        <div class="item-icon"><i class="fas fa-flask"></i></div>
-                        <div class="item-name">Water Flask</div>
-                    </div>
-                    <div class="item-slot" data-slot="4">
-                        <div class="item-icon"><i class="fas fa-shield-alt"></i></div>
-                        <div class="item-name">Wolf Repellent</div>
-                    </div>
-                </div>
-                <div class="weight-display">Weight: <span id="weight-value">0/50</span></div>
-            </div>
-
-            <!-- Messages -->
-            <div id="message-log">
-                <div class="message">
-                    <i class="fas fa-info-circle"></i>
-                    <span>You wake up in the forest. Find shelter and food.</span>
-                </div>
-                <div class="message">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>Listen for wolf howls. They hunt at night.</span>
-                </div>
-            </div>
-
-            <!-- Interaction Prompt -->
-            <div id="interaction-prompt" class="hidden">
-                <div class="prompt-content">
-                    <i class="fas fa-hand-point-right"></i>
-                    <span id="prompt-text">Press E to interact</span>
-                </div>
-            </div>
-
-            <!-- Sanity Effects Overlay -->
-            <div id="sanity-overlay"></div>
-        </div>
-
-        <!-- Memory Interface -->
-        <div id="memory-interface" class="hidden">
-            <div class="memory-header">
-                <h2>Memory Recollection</h2>
-                <div class="memory-progress">Clarity: <span id="clarity-value">0%</span></div>
-            </div>
-            <div class="memory-grid" id="memory-grid"></div>
-            <div class="memory-info">
-                <h3 id="memory-title">No Memory Selected</h3>
-                <p id="memory-description">Select a memory fragment to view its details.</p>
-                <div class="memory-effects">
-                    <h4>Effects:</h4>
-                    <ul id="memory-effects-list"></ul>
-                </div>
-                <button id="use-memory" class="btn btn-primary hidden">
-                    <i class="fas fa-brain"></i> Recollect Memory
-                </button>
-            </div>
-            <button id="close-memory" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Close
-            </button>
-        </div>
-
-        <!-- Pause Menu -->
-        <div id="pause-menu" class="hidden">
-            <div class="pause-content">
-                <h2>Game Paused</h2>
-                <div class="pause-stats">
-                    <div class="stat-card">
-                        <h3>Survival Stats</h3>
-                        <p>Time Survived: <span id="survived-time">0h 0m</span></p>
-                        <p>Days Survived: <span id="survived-days">1</span></p>
-                        <p>Distance Traveled: <span id="distance-traveled">0m</span></p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Discovery</h3>
-                        <p>Memory Fragments: <span id="memories-found">0/12</span></p>
-                        <p>Areas Explored: <span id="areas-explored">1%</span></p>
-                        <p>Wolf Encounters: <span id="wolf-encounters">0</span></p>
-                    </div>
-                </div>
-                <div class="pause-options">
-                    <button id="resume-game" class="btn btn-large">
-                        <i class="fas fa-play"></i> Resume Game
-                    </button>
-                    <button id="save-game" class="btn btn-large">
-                        <i class="fas fa-save"></i> Save Game
-                    </button>
-                    <button id="load-game-menu" class="btn btn-large">
-                        <i class="fas fa-folder-open"></i> Load Game
-                    </button>
-                    <button id="settings-menu" class="btn btn-large">
-                        <i class="fas fa-cog"></i> Settings
-                    </button>
-                    <button id="quit-to-menu" class="btn btn-large btn-danger">
-                        <i class="fas fa-sign-out-alt"></i> Quit to Menu
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Death Screen -->
-        <div id="death-screen" class="screen hidden">
-            <div class="death-content">
-                <h1><i class="fas fa-skull-crossbones"></i> YOU DIED</h1>
-                <div class="death-stats">
-                    <h3>Survival Summary</h3>
-                    <p>Cause of Death: <span id="death-cause">Unknown</span></p>
-                    <p>Time Survived: <span id="death-time">0 hours</span></p>
-                    <p>Memory Fragments: <span id="death-memories">0/12</span></p>
-                    <p>Days Survived: <span id="death-days">1</span></p>
-                </div>
-                <div class="death-options">
-                    <button id="retry-game" class="btn btn-large">
-                        <i class="fas fa-redo"></i> Retry
-                    </button>
-                    <button id="death-to-menu" class="btn btn-large">
-                        <i class="fas fa-home"></i> Main Menu
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Win Screen -->
-        <div id="win-screen" class="screen hidden">
-            <div class="win-content">
-                <h1><i class="fas fa-trophy"></i> FOREST UNDERSTOOD</h1>
-                <div class="ending-title" id="ending-title">The Lost Child Returns</div>
-                <div class="ending-description" id="ending-description">
-                    You have uncovered the secrets of the forest and found your way home.
-                </div>
-                <div class="win-stats">
-                    <h3>Game Completion</h3>
-                    <p>Ending Achieved: <span id="ending-type">Friendly Forest</span></p>
-                    <p>Total Playtime: <span id="total-time">0 hours</span></p>
-                    <p>Memory Fragments: <span id="total-memories">12/12</span></p>
-                    <p>Wolf Relationships: <span id="wolf-relationship">Neutral</span></p>
-                </div>
-                <div class="win-options">
-                    <button id="new-game-plus" class="btn btn-large">
-                        <i class="fas fa-plus-circle"></i> New Game+
-                    </button>
-                    <button id="win-to-menu" class="btn btn-large">
-                        <i class="fas fa-home"></i> Main Menu
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Controls Help -->
-        <div id="controls-help" class="hidden">
-            <div class="controls-grid">
-                <div class="control">
-                    <span class="key">WASD</span>
-                    <span class="action">Movement</span>
-                </div>
-                <div class="control">
-                    <span class="key">Mouse</span>
-                    <span class="action">Look Around</span>
-                </div>
-                <div class="control">
-                    <span class="key">Shift</span>
-                    <span class="action">Sprint</span>
-                </div>
-                <div class="control">
-                    <span class="key">Space</span>
-                    <span class="action">Jump</span>
-                </div>
-                <div class="control">
-                    <span class="key">F</span>
-                    <span class="action">Flashlight</span>
-                </div>
-                <div class="control">
-                    <span class="key">E</span>
-                    <span class="action">Interact</span>
-                </div>
-                <div class="control">
-                    <span class="key">Tab</span>
-                    <span class="action">Inventory</span>
-                </div>
-                <div class="control">
-                    <span class="key">M</span>
-                    <span class="action">Memory View</span>
-                </div>
-                <div class="control">
-                    <span class="key">ESC</span>
-                    <span class="action">Pause Menu</span>
-                </div>
-            </div>
-        </div>
+    <div id="inventory-ui">
+      <div class="inv-slot" data-slot="0">🔦</div>
+      <div class="inv-slot" data-slot="1">💧</div>
+      <div class="inv-slot" data-slot="2">🍞</div>
+      <div class="inv-slot" data-slot="3">🪶</div>
+      <div class="inv-slot" data-slot="4">🪵</div>
     </div>
+    <div id="memory-counter">Memories: <span id="memory-count">0</span>/12</div>
+    <div id="time-display">Day 1, 06:00</div>
+    <div id="message-log"></div>
+  </div>
 
-    <!-- Settings Menu -->
-    <div id="settings-screen" class="screen hidden">
-        <div class="settings-container">
-            <h2><i class="fas fa-cog"></i> Settings</h2>
-            
-            <div class="settings-sections">
-                <!-- Graphics -->
-                <div class="settings-section">
-                    <h3><i class="fas fa-desktop"></i> Graphics</h3>
-                    <div class="setting">
-                        <label for="quality">Quality Preset</label>
-                        <select id="quality">
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                            <option value="ultra">Ultra</option>
-                        </select>
-                    </div>
-                    <div class="setting">
-                        <label for="render-distance">Render Distance</label>
-                        <input type="range" id="render-distance" min="100" max="1000" value="500">
-                        <span id="render-distance-value">500m</span>
-                    </div>
-                    <div class="setting">
-                        <label for="shadows">
-                            <input type="checkbox" id="shadows" checked>
-                            Enable Shadows
-                        </label>
-                    </div>
-                    <div class="setting">
-                        <label for="particles">
-                            <input type="checkbox" id="particles" checked>
-                            Particle Effects
-                        </label>
-                    </div>
-                </div>
+  <!-- PAUSE MENU -->
+  <div id="pause-menu" class="overlay hidden">
+    <h2 class="menu-title">Paused</h2>
+    <button id="resume-btn">Resume</button>
+    <button id="save-btn">Save Game</button>
+    <button id="pause-quit-btn">Quit to Menu</button>
+  </div>
 
-                <!-- Audio -->
-                <div class="settings-section">
-                    <h3><i class="fas fa-volume-up"></i> Audio</h3>
-                    <div class="setting">
-                        <label for="master-volume">Master Volume</label>
-                        <input type="range" id="master-volume" min="0" max="100" value="80">
-                        <span id="master-volume-value">80%</span>
-                    </div>
-                    <div class="setting">
-                        <label for="sfx-volume">SFX Volume</label>
-                        <input type="range" id="sfx-volume" min="0" max="100" value="100">
-                        <span id="sfx-volume-value">100%</span>
-                    </div>
-                    <div class="setting">
-                        <label for="music-volume">Music Volume</label>
-                        <input type="range" id="music-volume" min="0" max="100" value="60">
-                        <span id="music-volume-value">60%</span>
-                    </div>
-                    <div class="setting">
-                        <label for="spatial-audio">
-                            <input type="checkbox" id="spatial-audio" checked>
-                            3D Spatial Audio
-                        </label>
-                    </div>
-                </div>
+  <!-- DEATH SCREEN -->
+  <div id="death-screen" class="overlay hidden">
+    <h2 class="menu-title death-title">The Forest Consumes You</h2>
+    <p class="ending-text">Your mind shattered, the whispers never stop.</p>
+    <button id="restart-btn">Try Again</button>
+    <button id="death-quit-btn">Main Menu</button>
+  </div>
 
-                <!-- Gameplay -->
-                <div class="settings-section">
-                    <h3><i class="fas fa-gamepad"></i> Gameplay</h3>
-                    <div class="setting">
-                        <label for="mouse-sensitivity">Mouse Sensitivity</label>
-                        <input type="range" id="mouse-sensitivity" min="1" max="10" value="5">
-                        <span id="mouse-sensitivity-value">5</span>
-                    </div>
-                    <div class="setting">
-                        <label for="fov">Field of View</label>
-                        <input type="range" id="fov" min="60" max="110" value="90">
-                        <span id="fov-value">90°</span>
-                    </div>
-                    <div class="setting">
-                        <label for="auto-save">
-                            <input type="checkbox" id="auto-save" checked>
-                            Auto-save every 5 minutes
-                        </label>
-                    </div>
-                    <div class="setting">
-                        <label for="hints">
-                            <input type="checkbox" id="hints" checked>
-                            Show Tutorial Hints
-                        </label>
-                    </div>
-                </div>
+  <!-- WIN SCREEN -->
+  <div id="win-screen" class="overlay hidden">
+    <h2 class="menu-title win-title">Escape</h2>
+    <p class="ending-text">You gather all memories and find the road out. The forest releases its grip.</p>
+    <button id="win-restart-btn">Play Again</button>
+    <button id="win-quit-btn">Main Menu</button>
+  </div>
 
-                <!-- Controls -->
-                <div class="settings-section">
-                    <h3><i class="fas fa-keyboard"></i> Controls</h3>
-                    <div class="setting">
-                        <label for="invert-y">
-                            <input type="checkbox" id="invert-y">
-                            Invert Y Axis
-                        </label>
-                    </div>
-                    <div class="setting">
-                        <label for="toggle-crouch">
-                            <input type="checkbox" id="toggle-crouch">
-                            Toggle Crouch
-                        </label>
-                    </div>
-                    <div class="setting">
-                        <label for="keyboard-layout">Keyboard Layout</label>
-                        <select id="keyboard-layout">
-                            <option value="qwerty">QWERTY</option>
-                            <option value="azerty">AZERTY</option>
-                            <option value="qwertz">QWERTZ</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+  <!-- SETTINGS / CREDITS PLACEHOLDERS (hidden) -->
+  <div id="settings-menu" class="overlay hidden">
+    <h2 class="menu-title">Settings</h2>
+    <p>Settings menu placeholder.</p>
+    <button id="back-from-settings">Back</button>
+  </div>
+  <div id="credits-menu" class="overlay hidden">
+    <h2 class="menu-title">Credits</h2>
+    <p>A game by You, in the darkness.</p>
+    <button id="back-from-credits">Back</button>
+  </div>
 
-            <div class="settings-buttons">
-                <button id="apply-settings" class="btn btn-primary">
-                    <i class="fas fa-check"></i> Apply
-                </button>
-                <button id="reset-settings" class="btn btn-secondary">
-                    <i class="fas fa-undo"></i> Reset
-                </button>
-                <button id="back-to-menu" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Load Game Screen -->
-    <div id="load-screen" class="screen hidden">
-        <div class="load-container">
-            <h2><i class="fas fa-folder-open"></i> Load Game</h2>
-            
-            <div class="save-slots" id="save-slots">
-                <!-- Save slots will be generated here -->
-            </div>
-            
-            <div class="load-buttons">
-                <button id="back-from-load" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-                <button id="delete-save" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Delete Save
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Credits Screen -->
-    <div id="credits-screen" class="screen hidden">
-        <div class="credits-container">
-            <h2><i class="fas fa-info-circle"></i> Credits</h2>
-            
-            <div class="credits-content">
-                <div class="credit-section">
-                    <h3>Development</h3>
-                    <p>Lead Developer: Forest Studio</p>
-                    <p>Game Design: Echoes Team</p>
-                    <p>3D Art & Animation: Wilderness Creators</p>
-                    <p>Sound Design: Audio Grove</p>
-                </div>
-                
-                <div class="credit-section">
-                    <h3>Special Thanks</h3>
-                    <p>Three.js Community</p>
-                    <p>Beta Testers Group</p>
-                    <p>Open Source Contributors</p>
-                </div>
-                
-                <div class="credit-section">
-                    <h3>Technology</h3>
-                    <p>Powered by Three.js</p>
-                    <p>WebAudio API</p>
-                    <p>Procedural Generation Algorithms</p>
-                </div>
-            </div>
-            
-            <button id="back-from-credits" class="btn btn-primary">
-                <i class="fas fa-arrow-left"></i> Back to Menu
-            </button>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r153/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/controls/PointerLockControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="script.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
