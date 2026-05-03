@@ -40,6 +40,7 @@ body {
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
+  pointer-events: all;  /* allow clicks only on visible overlays */
 }
 .hidden { display: none !important; }
 
@@ -155,7 +156,7 @@ button:hover {
 }
 #click-to-start {
   margin-top: 2rem; font-size: 1.5rem; color: #f0c060;
-  animation: pulse 2s infinite;
+  animation: pulse 2s infinite; cursor: pointer;
 }
 @keyframes pulse {
   0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; }
