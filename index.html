@@ -14,12 +14,12 @@
       <div class="loading-bar-container">
         <div class="loading-bar"></div>
       </div>
-      <p class="loading-text">Loading…</p>
+      <p class="loading-text">Loading...</p>
     </div>
   </div>
 
   <!-- MAIN MENU -->
-  <div id="main-menu" class="overlay hidden">
+  <div id="main-menu" class="overlay">
     <h1 class="menu-title">EARS OF THE FOREST</h1>
     <button id="new-game-btn">New Game</button>
     <button id="continue-btn">Continue</button>
@@ -34,9 +34,10 @@
     <div class="cutscene-text">
       <p id="typewriter"></p>
     </div>
+    <div id="click-to-start" class="hidden">Click to enter the forest</div>
   </div>
 
-  <!-- GAME CANVAS (Three.js inserts canvas here) -->
+  <!-- GAME CANVAS -->
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
   </div>
@@ -87,7 +88,7 @@
     <button id="win-quit-btn">Main Menu</button>
   </div>
 
-  <!-- SETTINGS / CREDITS PLACEHOLDERS (hidden) -->
+  <!-- SETTINGS / CREDITS -->
   <div id="settings-menu" class="overlay hidden">
     <h2 class="menu-title">Settings</h2>
     <p>Settings menu placeholder.</p>
