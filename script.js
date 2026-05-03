@@ -10,449 +10,527 @@ const hud = document.getElementById('hud');
 const pauseMenu = document.getElementById('pause-menu');
 const deathScreen = document.getElementById('death-screen');
 const winScreen = document.getElementById('win-screen');
-const settingsMenu = document.getElementById('settings-menu');
-const creditsMenu = document.getElementById('credits-menu');
-const messageLog = document.getElementById('message-log');
+const dialogueText = document.getElementById('dialogue-text');
+const choiceButtons = document.getElementById('choice-buttons');
+const healthFill = document.getElementById('health-fill');
+const fearFill = document.getElementById('fear-fill');
+const batteryFill = document.getElementById('battery-fill');
+const batteryCount = document.getElementById('battery-count');
+const medkitCount = document.getElementById('medkit-count');
+const survivalCount = document.getElementById('survival-count');
+const compass = document.getElementById('compass');
+const deathEnding = document.getElementById('death-ending-text');
+const winEnding = document.getElementById('win-ending-text');
 const typewriter = document.getElementById('typewriter');
-const healthBar = document.getElementById('health-bar');
-const sanityBar = document.getElementById('sanity-bar');
-const hungerBar = document.getElementById('hunger-bar');
-const thirstBar = document.getElementById('thirst-bar');
-const staminaBar = document.getElementById('stamina-bar');
-const tempBar = document.getElementById('temp-bar');
-const memoryCount = document.getElementById('memory-count');
-const timeDisplay = document.getElementById('time-display');
-const inventorySlots = document.querySelectorAll('.inv-slot');
+
+// ========== Audio (simple oscillator) ==========
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playBeep(freq = 220, duration = 0.1, vol = 0.1) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.frequency.value = freq;
+  gain.gain.value = vol;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  setTimeout(() => { osc.stop(); }, duration * 1000);
+}
 
 // ========== GAME STATE ==========
 const state = {
   isPlaying: false, isPaused: false, isDead: false, isWon: false,
-  health: 100, sanity: 100, hunger: 85, thirst: 90, stamina: 100,
-  temperature: 70, memoryFragments: 0, totalFragments: 12,
-  day: 1, timeOfDay: 360,
-  flashlightOn: true, flashlightBattery: 100,
-  selectedSlot: 0,
-  inventory: [
-    { name: 'Flashlight', icon: '🔦', quantity: Infinity },
-    { name: 'Water',     icon: '💧', quantity: 3 },
-    { name: 'Food',      icon: '🍞', quantity: 2 },
-    { name: 'Distraction', icon: '🪶', quantity: 2 },
-    { name: 'Repellent',   icon: '🪵', quantity: 1 },
-  ],
+  health: 100, fear: 0, flashlightBattery: 100, flashlightOn: true,
+  inventory: { batteries: 0, medkits: 0, survivalKits: 0 },
+  storyFlags: {
+    helpedClassmate: false, exploredCave: false, foundSecret: false,
+    bossDefeated: false, classmateLost: false,
+  },
+  time: 0,
+  wolfSpawned: false, packSpawned: false, hordeSpawned: false,
+  bossActive: false,
+  ending: 'bad',
 };
 
 // ========== THREE.JS SETUP ==========
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-// Linear fog for better depth visibility
-scene.fog = new THREE.Fog('#1a1a2e', 30, 150);
-scene.background = new THREE.Color('#1a1a2e');
+scene.fog = new THREE.Fog('#c0d0d0', 10, 80); // light daytime fog
+scene.background = new THREE.Color('#87ceeb'); // light blue sky
 
-const camera = new THREE.PerspectiveCamera(78, window.innerWidth / window.innerHeight, 0.5, 300);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 200);
 camera.position.set(0, 1.8, 0);
-camera.lookAt(0, 1.8, -10);
-
 const controls = new PointerLockControls(camera, document.body);
 
-// Lights
-const ambientLight = new THREE.AmbientLight('#445566', 1.0);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight('#ffe8cc', 2.2);
-directionalLight.position.set(60, 70, 30);
-directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
-directionalLight.shadow.camera.near = 0.5;
-directionalLight.shadow.camera.far = 200;
-directionalLight.shadow.camera.left = -90;
-directionalLight.shadow.camera.right = 90;
-directionalLight.shadow.camera.top = 90;
-directionalLight.shadow.camera.bottom = -90;
-scene.add(directionalLight);
+// Lighting
+const hemiLight = new THREE.HemisphereLight('#b1e1ff', '#53752d', 1.0);
+scene.add(hemiLight);
+const sunLight = new THREE.DirectionalLight('#fff5e6', 1.5);
+sunLight.position.set(50, 80, 30);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 1024;
+sunLight.shadow.mapSize.height = 1024;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 200;
+sunLight.shadow.camera.left = -60;
+sunLight.shadow.camera.right = 60;
+sunLight.shadow.camera.top = 60;
+sunLight.shadow.camera.bottom = -60;
+scene.add(sunLight);
 
-const playerFlashlight = new THREE.SpotLight('#ffe8c0', 12, 35, Math.PI / 6, 0.3, 1);
-playerFlashlight.castShadow = true;
-playerFlashlight.shadow.mapSize.width = 512;
-playerFlashlight.shadow.mapSize.height = 512;
-playerFlashlight.shadow.camera.near = 0.3;
-playerFlashlight.shadow.camera.far = 40;
-scene.add(playerFlashlight);
-scene.add(playerFlashlight.target);
+// Flashlight
+const flashlight = new THREE.SpotLight('#ffecaa', 5, 30, Math.PI / 8);
+flashlight.castShadow = true;
+flashlight.shadow.mapSize.width = 512;
+flashlight.shadow.mapSize.height = 512;
+scene.add(flashlight);
+scene.add(flashlight.target);
 
 // ========== WORLD ==========
-const worldObjects = [];
+const groundMat = new THREE.MeshStandardMaterial({ color: '#4c7a2d', roughness: 0.9 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
 
-function getTerrainHeight(x, z) {
-  return Math.sin(x * 0.03) * Math.cos(z * 0.03) * 4 + Math.sin(x * 0.08 + z * 0.08) * 2;
+// Trees
+function createTree(x, z) {
+  const group = new THREE.Group();
+  const trunkH = 2.5 + Math.random() * 2;
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, trunkH, 6), new THREE.MeshStandardMaterial({ color: '#5c4033' }));
+  trunk.position.y = trunkH/2;
+  trunk.castShadow = true; trunk.receiveShadow = true;
+  group.add(trunk);
+  for (let i = 0; i < 4; i++) {
+    const size = 0.8 - i * 0.15;
+    const leaf = new THREE.Mesh(new THREE.ConeGeometry(size, 1.2, 8), new THREE.MeshStandardMaterial({ color: '#2d5a27' }));
+    leaf.position.y = trunkH + i * 0.9;
+    leaf.castShadow = true; leaf.receiveShadow = true;
+    group.add(leaf);
+  }
+  group.position.set(x, 0, z);
+  scene.add(group);
+  return group;
+}
+for (let i = 0; i < 150; i++) {
+  const x = (Math.random() - 0.5) * 180;
+  const z = (Math.random() - 0.5) * 180;
+  if (Math.abs(x) < 8 && Math.abs(z) < 8) continue; // spawn area
+  createTree(x, z);
 }
 
-function generateWorld() {
-  // Ground (deformed plane)
-  const groundGeo = new THREE.PlaneGeometry(300, 300, 120, 120);
-  groundGeo.rotateX(-Math.PI / 2);
-  const pos = groundGeo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const z = pos.getY(i);
-    pos.setZ(i, getTerrainHeight(x, z));
-  }
-  groundGeo.computeVertexNormals();
-  const groundMat = new THREE.MeshStandardMaterial({
-    color: '#3d5e3c', roughness: 0.8, metalness: 0.1,
-    emissive: '#142010', emissiveIntensity: 0.3  // make it visible even in shadow
-  });
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-  ground.receiveShadow = true;
-  scene.add(ground);
-  worldObjects.push(ground);
+// Cave
+const caveGroup = new THREE.Group();
+const caveBase = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 8), new THREE.MeshStandardMaterial({ color: '#3d3d3d' }));
+caveBase.position.y = 2;
+caveBase.castShadow = true; caveBase.receiveShadow = true;
+caveGroup.add(caveBase);
+const caveRoof = new THREE.Mesh(new THREE.ConeGeometry(4, 3, 8), new THREE.MeshStandardMaterial({ color: '#2a2a2a' }));
+caveRoof.position.y = 5;
+caveGroup.add(caveRoof);
+caveGroup.position.set(40, 0, -40);
+scene.add(caveGroup);
 
-  // Trees
-  for (let i = 0; i < 250; i++) {
-    const x = (Math.random() - 0.5) * 290;
-    const z = (Math.random() - 0.5) * 290;
-    const y = getTerrainHeight(x, z);
-    const tree = new THREE.Group();
-    const trunkH = 2.5 + Math.random() * 3.5;
-    const trunkGeo = new THREE.CylinderGeometry(0.2, 0.4, trunkH, 8);
-    const trunk = new THREE.Mesh(trunkGeo, new THREE.MeshStandardMaterial({ color: '#4a3420', roughness: 0.9 }));
-    trunk.position.y = trunkH / 2;
-    trunk.castShadow = true; trunk.receiveShadow = true;
-    tree.add(trunk);
-    for (let j = 0; j < 3; j++) {
-      const coneGeo = new THREE.ConeGeometry(1.3 - j * 0.3, 1.8 - j * 0.3, 8);
-      const cone = new THREE.Mesh(coneGeo, new THREE.MeshStandardMaterial({ color: '#1f4a1a', roughness: 0.6 }));
-      cone.position.y = trunkH + j * 1.4;
-      cone.castShadow = true; cone.receiveShadow = true;
-      tree.add(cone);
-    }
-    tree.position.set(x, y, z);
-    tree.rotation.y = Math.random() * Math.PI * 2;
-    tree.scale.setScalar(0.8 + Math.random() * 0.6);
-    scene.add(tree);
-    worldObjects.push(tree);
-  }
-
-  // Memory fragments
-  window.fragments = [];
-  for (let i = 0; i < state.totalFragments; i++) {
-    const fx = (Math.random() - 0.5) * 260;
-    const fz = (Math.random() - 0.5) * 260;
-    const fy = getTerrainHeight(fx, fz) + 1.8;
-    const crystal = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.6),
-      new THREE.MeshStandardMaterial({ color: '#ffdd55', roughness: 0.1, metalness: 0.7, emissive: '#ffaa00', emissiveIntensity: 2 })
-    );
-    crystal.position.set(fx, fy, fz);
-    crystal.userData = { fragmentIndex: i, collected: false };
-    scene.add(crystal);
-    window.fragments.push(crystal);
-    worldObjects.push(crystal);
-  }
+// Items (batteries, medkits)
+const items = [];
+function spawnItem(type, x, z) {
+  const color = type === 'battery' ? '#f1c40f' : '#e74c3c';
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color }));
+  mesh.position.set(x, 0.3, z);
+  mesh.userData = { type, collected: false };
+  scene.add(mesh);
+  items.push(mesh);
+}
+for (let i = 0; i < 8; i++) {
+  const x = (Math.random() - 0.5) * 150;
+  const z = (Math.random() - 0.5) * 150;
+  if (Math.abs(x) < 10 && Math.abs(z) < 10) continue;
+  spawnItem(i < 4 ? 'battery' : 'medkit', x, z);
 }
 
-function clearWorld() {
-  worldObjects.forEach(obj => scene.remove(obj));
-  worldObjects.length = 0;
+// Classmates (simple humanoids)
+const classmates = [];
+function createClassmate(x, z) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8), new THREE.MeshStandardMaterial({ color: '#3498db' }));
+  body.position.y = 0.7;
+  group.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), new THREE.MeshStandardMaterial({ color: '#f1c40f' }));
+  head.position.y = 1.65;
+  group.add(head);
+  group.position.set(x, 0, z);
+  scene.add(group);
+  return { mesh: group, state: 'follow' };
+}
+for (let i = 0; i < 3; i++) {
+  classmates.push(createClassmate((i-1)*2, -5));
 }
 
-// ========== PLAYER CONTROLS ==========
-const keys = { w: false, a: false, s: false, d: false, shift: false, space: false };
-document.addEventListener('keydown', (e) => {
-  switch (e.code) {
-    case 'KeyW': keys.w = true; break;
-    case 'KeyA': keys.a = true; break;
-    case 'KeyS': keys.s = true; break;
-    case 'KeyD': keys.d = true; break;
-    case 'ShiftLeft': case 'ShiftRight': keys.shift = true; break;
-    case 'Space': keys.space = true; break;
-    case 'KeyF': if (state.isPlaying && !state.isPaused) toggleFlashlight(); break;
-    case 'Digit1': state.selectedSlot = 0; updateInventoryUI(); break;
-    case 'Digit2': state.selectedSlot = 1; updateInventoryUI(); break;
-    case 'Digit3': state.selectedSlot = 2; updateInventoryUI(); break;
-    case 'Digit4': state.selectedSlot = 3; updateInventoryUI(); break;
-    case 'Digit5': state.selectedSlot = 4; updateInventoryUI(); break;
-    case 'KeyE': tryInteract(); break;
-    case 'Escape': if (state.isPlaying && !state.isPaused) pauseGame(); break;
-  }
+// Wolves (enemies)
+const wolves = [];
+function createWolf(x, z, isBoss = false) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.7), new THREE.MeshStandardMaterial({ color: isBoss ? '#000' : '#4d4d4d' }));
+  body.position.y = 0.5;
+  group.add(body);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.6), new THREE.MeshStandardMaterial({ color: '#222' }));
+  head.position.set(0, 0.9, 0.6);
+  group.add(head);
+  group.position.set(x, 0, z);
+  scene.add(group);
+  return {
+    mesh: group, state: 'idle', speed: isBoss ? 6 : 3.5, damage: isBoss ? 15 : 8,
+    isBoss, health: isBoss ? 80 : 30,
+  };
+}
+
+// ========== PLAYER ==========
+const keys = { w: false, a: false, s: false, d: false, shift: false };
+document.addEventListener('keydown', e => {
+  if (e.code === 'KeyW') keys.w = true;
+  if (e.code === 'KeyA') keys.a = true;
+  if (e.code === 'KeyS') keys.s = true;
+  if (e.code === 'KeyD') keys.d = true;
+  if (e.code === 'ShiftLeft') keys.shift = true;
+  if (e.code === 'KeyF' && state.isPlaying) toggleFlashlight();
+  if (e.code === 'KeyE') interact();
+  if (e.code === 'Digit1') useItem('battery');
+  if (e.code === 'Digit2') useItem('medkit');
+  if (e.code === 'Digit3') craftSurvivalKit();
+  if (e.code === 'Escape' && state.isPlaying && !state.isPaused) pauseGame();
 });
-document.addEventListener('keyup', (e) => {
-  switch (e.code) {
-    case 'KeyW': keys.w = false; break;
-    case 'KeyA': keys.a = false; break;
-    case 'KeyS': keys.s = false; break;
-    case 'KeyD': keys.d = false; break;
-    case 'ShiftLeft': case 'ShiftRight': keys.shift = false; break;
-    case 'Space': keys.space = false; break;
-  }
+document.addEventListener('keyup', e => {
+  if (e.code === 'KeyW') keys.w = false;
+  if (e.code === 'KeyA') keys.a = false;
+  if (e.code === 'KeyS') keys.s = false;
+  if (e.code === 'KeyD') keys.d = false;
+  if (e.code === 'ShiftLeft') keys.shift = false;
 });
 
 function toggleFlashlight() {
   state.flashlightOn = !state.flashlightOn;
-  playerFlashlight.intensity = state.flashlightOn ? 12 : 0;
-  addMessage(state.flashlightOn ? 'Flashlight on' : 'Flashlight off');
+  flashlight.intensity = state.flashlightOn ? 5 : 0;
 }
 
-let verticalVelocity = 0;
-const GRAVITY = -20;
+let verticalVel = 0;
 function updatePlayer(delta) {
-  if (!state.isPlaying || state.isPaused || state.isDead || state.isWon) return;
-  const sprintMult = (keys.shift && state.stamina > 0) ? 1.8 : 1;
-  const speed = 5.5 * sprintMult * delta;
-  if (keys.shift && state.stamina > 0) state.stamina = Math.max(0, state.stamina - 20 * delta);
-  else state.stamina = Math.min(100, state.stamina + 12 * delta);
-
-  const moveDir = new THREE.Vector3();
-  if (keys.w) moveDir.add(new THREE.Vector3(0,0,-1));
-  if (keys.s) moveDir.add(new THREE.Vector3(0,0,1));
-  if (keys.a) moveDir.add(new THREE.Vector3(-1,0,0));
-  if (keys.d) moveDir.add(new THREE.Vector3(1,0,0));
-  if (moveDir.length() > 0) moveDir.normalize().applyQuaternion(camera.quaternion);
-
+  if (!state.isPlaying || state.isPaused || state.isDead) return;
+  const speed = (keys.shift ? 9 : 5) * delta;
+  const dir = new THREE.Vector3();
+  if (keys.w) dir.z -= 1;
+  if (keys.s) dir.z += 1;
+  if (keys.a) dir.x -= 1;
+  if (keys.d) dir.x += 1;
+  if (dir.length() > 0) dir.normalize().applyQuaternion(camera.quaternion);
   const newPos = camera.position.clone();
-  newPos.x += moveDir.x * speed;
-  newPos.z += moveDir.z * speed;
-  const groundY = getTerrainHeight(newPos.x, newPos.z);
-  const targetY = groundY + 1.8;
-
-  if (keys.space && Math.abs(camera.position.y - targetY) < 0.15) verticalVelocity = 5;
-  verticalVelocity += GRAVITY * delta;
-  newPos.y += verticalVelocity * delta;
-  if (newPos.y <= targetY) { newPos.y = targetY; verticalVelocity = 0; }
+  newPos.x += dir.x * speed;
+  newPos.z += dir.z * speed;
+  verticalVel -= 20 * delta;
+  newPos.y += verticalVel * delta;
+  if (newPos.y <= 1.8) { newPos.y = 1.8; verticalVel = 0; }
   camera.position.copy(newPos);
-
-  playerFlashlight.position.copy(camera.position);
-  const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-  playerFlashlight.target.position.copy(camera.position).add(dir.multiplyScalar(20));
+  flashlight.position.copy(camera.position);
+  const lookDir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  flashlight.target.position.copy(camera.position).add(lookDir.multiplyScalar(15));
+  compass.textContent = `N (${Math.round(camera.position.x)}, ${Math.round(camera.position.z)})`;
 }
 
-// ========== INTERACTION ==========
-function tryInteract() {
+// ========== INTERACTIONS ==========
+function interact() {
   if (!state.isPlaying || state.isPaused) return;
-  for (const frag of window.fragments) {
-    if (frag.userData.collected) continue;
-    if (camera.position.distanceTo(frag.position) < 4) {
-      collectFragment(frag);
+  // Collect items
+  for (const item of items) {
+    if (!item.userData.collected && camera.position.distanceTo(item.position) < 2.5) {
+      item.userData.collected = true;
+      scene.remove(item);
+      if (item.userData.type === 'battery') { state.inventory.batteries++; showDialogue('Picked up a battery pack.'); }
+      else { state.inventory.medkits++; showDialogue('Picked up a medkit.'); }
+      updateUI();
       return;
+    }
+  }
+  // Enter cave
+  if (camera.position.distanceTo(caveGroup.position) < 7) {
+    state.storyFlags.exploredCave = true;
+    scene.fog.density = 0.02;
+    showDialogue('You enter the dark cave...');
+    if (!state.bossActive) {
+      state.bossActive = true;
+      const boss = createWolf(caveGroup.position.x, caveGroup.position.z, true);
+      wolves.push(boss);
+      showDialogue('A monstrous black wolf blocks the path!');
     }
   }
 }
 
-function collectFragment(frag) {
-  frag.userData.collected = true;
-  scene.remove(frag);
-  state.memoryFragments++;
-  state.sanity = Math.min(100, state.sanity + 20);
-  memoryCount.textContent = state.memoryFragments;
-  addMessage(`Memory fragment (${state.memoryFragments}/12). Your mind clears.`);
-  if (state.memoryFragments >= state.totalFragments) winGame();
+function useItem(type) {
+  if (type === 'battery' && state.inventory.batteries > 0) {
+    state.inventory.batteries--;
+    state.flashlightBattery = 100;
+    showDialogue('Flashlight battery restored.');
+  }
+  if (type === 'medkit' && state.inventory.medkits > 0) {
+    state.inventory.medkits--;
+    state.health = Math.min(100, state.health + 40);
+    showDialogue('Used a medkit.');
+  }
+  updateUI();
 }
 
-// ========== SURVIVAL ==========
-function updateSurvival(delta) {
-  if (!state.isPlaying || state.isPaused || state.isDead || state.isWon) return;
-  state.hunger = Math.max(0, state.hunger - delta * 1.2);
-  state.thirst = Math.max(0, state.thirst - delta * 1.5);
-  const isNight = state.timeOfDay < 360 || state.timeOfDay > 1080;
-  state.temperature += (isNight ? -delta * 5 : delta * 2);
-  state.temperature = THREE.MathUtils.clamp(state.temperature, 10, 100);
-  const darknessFactor = state.flashlightOn ? 0.1 : (isNight ? 0.7 : 0.15);
-  state.sanity = Math.max(0, state.sanity - delta * darknessFactor * 6);
-  if (state.hunger < 10) state.health -= delta * 5;
-  if (state.thirst < 10) state.health -= delta * 6;
-  if (state.temperature < 25) state.health -= delta * 4;
-  if (state.health <= 0) { state.health = 0; die(); }
-  if (state.sanity < 25 && Math.random() < delta * 0.8) addMessage('...don\'t look back...');
-  if (state.sanity < 15) {
-    camera.position.x += (Math.random() - 0.5) * 0.04;
-    camera.position.z += (Math.random() - 0.5) * 0.04;
+function craftSurvivalKit() {
+  if (state.inventory.batteries >= 1 && state.inventory.medkits >= 1) {
+    state.inventory.batteries--;
+    state.inventory.medkits--;
+    state.inventory.survivalKits++;
+    showDialogue('Crafted a Survival Kit!');
+    updateUI();
   }
 }
 
-// ========== TIME ==========
-function updateTime(delta) {
-  if (!state.isPlaying || state.isPaused || state.isDead || state.isWon) return;
-  state.timeOfDay += delta * 2;
-  if (state.timeOfDay >= 1440) { state.timeOfDay -= 1440; state.day++; }
-  const hours = Math.floor(state.timeOfDay / 60);
-  const mins = Math.floor(state.timeOfDay % 60);
-  timeDisplay.textContent = `Day ${state.day}, ${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
-  const sunAngle = (state.timeOfDay / 1440) * Math.PI * 2;
-  const sunHeight = Math.sin(sunAngle);
-  const dayFactor = Math.max(0.1, sunHeight * 0.8 + 0.5);
-  ambientLight.intensity = 0.3 + dayFactor * 0.8;
-  directionalLight.intensity = dayFactor * 2;
-  // Sky colour
-  scene.background = new THREE.Color(0.05 + dayFactor * 0.4, 0.1 + dayFactor * 0.3, 0.2 + dayFactor * 0.5);
-}
-
-// ========== UI ==========
-function updateHUD() {
-  healthBar.style.width = `${state.health}%`;
-  sanityBar.style.width = `${state.sanity}%`;
-  hungerBar.style.width = `${state.hunger}%`;
-  thirstBar.style.width = `${state.thirst}%`;
-  staminaBar.style.width = `${state.stamina}%`;
-  tempBar.style.width = `${state.temperature}%`;
-}
-function updateInventoryUI() {
-  inventorySlots.forEach((slot, idx) => {
-    slot.classList.toggle('active', idx === state.selectedSlot);
-    slot.textContent = state.inventory[idx].icon;
-  });
-}
-function addMessage(text) {
-  const msg = document.createElement('div');
-  msg.className = 'message';
-  msg.textContent = text;
-  messageLog.appendChild(msg);
-  requestAnimationFrame(() => msg.classList.add('show'));
-  setTimeout(() => { msg.classList.remove('show'); setTimeout(() => msg.remove(), 600); }, 4000);
-  while (messageLog.children.length > 5) messageLog.firstChild.remove();
-}
-
-// ========== MENUS ==========
-function showMainMenu() { closeAll(); mainMenu.classList.remove('hidden'); }
-function closeAll() {
-  [mainMenu, introCutscene, hud, pauseMenu, deathScreen, winScreen, settingsMenu, creditsMenu].forEach(el => el.classList.add('hidden'));
-}
-
-function startNewGame() {
-  resetState();
-  closeAll();
-  hud.classList.remove('hidden');
-  state.isPlaying = true;
-  controls.lock(); // will be triggered after user gesture
-}
-function resetState() {
-  state.health = 100; state.sanity = 100; state.hunger = 85; state.thirst = 90; state.stamina = 100;
-  state.temperature = 70; state.memoryFragments = 0; state.day = 1; state.timeOfDay = 360;
-  state.flashlightOn = true; playerFlashlight.intensity = 12;
-  state.forestMood = 'neutral';
-  state.inventory = [
-    { name: 'Flashlight', icon: '🔦', quantity: Infinity },
-    { name: 'Water',     icon: '💧', quantity: 3 },
-    { name: 'Food',      icon: '🍞', quantity: 2 },
-    { name: 'Distraction', icon: '🪶', quantity: 2 },
-    { name: 'Repellent',   icon: '🪵', quantity: 1 },
-  ];
-  state.selectedSlot = 0;
-  clearWorld();
-  generateWorld();
-  updateInventoryUI();
-  memoryCount.textContent = '0';
-}
-
-function die() { state.isDead = true; state.isPlaying = false; controls.unlock(); closeAll(); deathScreen.classList.remove('hidden'); }
-function winGame() { state.isWon = true; state.isPlaying = false; controls.unlock(); closeAll(); winScreen.classList.remove('hidden'); }
-function pauseGame() { state.isPaused = true; pauseMenu.classList.remove('hidden'); controls.unlock(); }
-function resumeGame() { state.isPaused = false; pauseMenu.classList.add('hidden'); controls.lock(); }
-function saveGame() { localStorage.setItem('earsOfTheForest_save', JSON.stringify(state)); addMessage('Game saved.'); }
-function loadGame() {
-  const saved = localStorage.getItem('earsOfTheForest_save');
-  if (!saved) return false;
-  Object.assign(state, JSON.parse(saved));
-  clearWorld();
-  generateWorld();
-  for (let i = 0; i < state.memoryFragments; i++) {
-    if (window.fragments[i]) { window.fragments[i].userData.collected = true; scene.remove(window.fragments[i]); }
+// ========== AI ==========
+function updateClassmates(delta) {
+  for (const cm of classmates) {
+    const dist = cm.mesh.position.distanceTo(camera.position);
+    if (cm.state === 'follow') {
+      const dir = camera.position.clone().sub(cm.mesh.position).normalize();
+      cm.mesh.position.x += dir.x * 2 * delta;
+      cm.mesh.position.z += dir.z * 2 * delta;
+    }
+    // Panic when fear high
+    if (state.fear > 60 && cm.state === 'follow') {
+      cm.state = 'panic';
+      showDialogue('A classmate panics!');
+    }
+    if (cm.state === 'panic') {
+      cm.mesh.position.x += (Math.random()-0.5) * 0.2;
+      cm.mesh.position.z += (Math.random()-0.5) * 0.2;
+    }
   }
-  memoryCount.textContent = state.memoryFragments;
-  updateHUD(); updateInventoryUI();
-  addMessage('Game loaded.');
-  return true;
+}
+
+function updateWolves(delta) {
+  for (const wolf of wolves) {
+    const dist = wolf.mesh.position.distanceTo(camera.position);
+    const dir = camera.position.clone().sub(wolf.mesh.position).normalize();
+    if (wolf.state === 'idle') {
+      if (dist < 20) wolf.state = 'stalk';
+    } else if (wolf.state === 'stalk') {
+      wolf.mesh.position.x += dir.x * wolf.speed * 0.4 * delta;
+      wolf.mesh.position.z += dir.z * wolf.speed * 0.4 * delta;
+      if (dist < 5) wolf.state = 'chase';
+    } else if (wolf.state === 'chase') {
+      wolf.mesh.position.x += dir.x * wolf.speed * delta;
+      wolf.mesh.position.z += dir.z * wolf.speed * delta;
+      if (dist < 2) {
+        state.health -= wolf.damage * delta * 2;
+        state.fear += 10 * delta;
+        if (state.health <= 0) die();
+      }
+    }
+    // face player
+    wolf.mesh.lookAt(camera.position);
+  }
 }
 
 // ========== EVENTS ==========
+function updateTimedEvents(delta) {
+  state.time += delta;
+  if (state.time > 10 && !state.storyFlags.classmateLost) {
+    state.storyFlags.classmateLost = true;
+    if (classmates.length > 0) {
+      const lost = classmates.pop();
+      scene.remove(lost.mesh);
+      showDialogue('Someone is missing...');
+      state.fear += 20;
+    }
+  }
+  if (state.time > 30 && !state.wolfSpawned) {
+    state.wolfSpawned = true;
+    const wolf = createWolf(20, -20);
+    wolves.push(wolf);
+    showDialogue('A wolf howls in the distance.');
+  }
+  if (state.time > 60 && !state.packSpawned) {
+    state.packSpawned = true;
+    for (let i=0; i<4; i++) {
+      wolves.push(createWolf((Math.random()-0.5)*60, (Math.random()-0.5)*60));
+    }
+    showDialogue('A pack of wolves surrounds you!');
+  }
+}
+
+// ========== DIALOGUE & CHOICES ==========
+function showDialogue(text, choices = []) {
+  dialogueText.textContent = text;
+  choiceButtons.innerHTML = '';
+  for (const c of choices) {
+    const btn = document.createElement('button');
+    btn.textContent = c.text;
+    btn.onclick = c.action;
+    choiceButtons.appendChild(btn);
+  }
+}
+
+function checkChoices() {
+  if (state.storyFlags.classmateLost && !state.storyFlags.helpedClassmate) {
+    showDialogue('What do you do?', [
+      { text: 'Look for them', action: () => {
+        state.storyFlags.helpedClassmate = true;
+        state.health += 10;
+        showDialogue('You find their trail, but they are gone.');
+      }},
+      { text: 'Keep moving', action: () => {
+        state.fear += 15;
+        showDialogue('You abandon the search.');
+      }},
+    ]);
+  }
+}
+
+// ========== ENDINGS ==========
+function die() {
+  state.isDead = true; state.isPlaying = false; controls.unlock();
+  deathEnding.textContent = 'You were consumed by the forest.';
+  deathScreen.classList.remove('hidden');
+  hud.classList.add('hidden');
+}
+function win() {
+  state.isWon = true; state.isPlaying = false; controls.unlock();
+  const helped = state.storyFlags.helpedClassmate;
+  const boss = state.storyFlags.bossDefeated;
+  if (helped && boss) {
+    state.ending = 'good';
+    winEnding.textContent = 'You and your classmates escape the forest together.';
+  } else if (boss) {
+    state.ending = 'secret';
+    winEnding.textContent = 'You defeated the beast alone and found a hidden escape route.';
+  } else {
+    state.ending = 'bad';
+    winEnding.textContent = 'You stagger out of the forest, forever changed.';
+  }
+  winScreen.classList.remove('hidden');
+  hud.classList.add('hidden');
+}
+
+// ========== UI ==========
+function updateUI() {
+  healthFill.style.width = state.health + '%';
+  fearFill.style.width = state.fear + '%';
+  batteryFill.style.width = state.flashlightBattery + '%';
+  batteryCount.textContent = state.inventory.batteries;
+  medkitCount.textContent = state.inventory.medkits;
+  survivalCount.textContent = state.inventory.survivalKits;
+}
+
+// ========== GAME FLOW ==========
+function startNewGame() {
+  state.isPlaying = true; state.isPaused = false; state.isDead = false; state.isWon = false;
+  state.health = 100; state.fear = 0; state.flashlightBattery = 100; state.flashlightOn = true;
+  state.inventory = { batteries: 0, medkits: 0, survivalKits: 0 };
+  state.storyFlags = { helpedClassmate: false, exploredCave: false, foundSecret: false, bossDefeated: false, classmateLost: false };
+  state.time = 0; state.wolfSpawned = false; state.packSpawned = false; state.hordeSpawned = false; state.bossActive = false;
+  camera.position.set(0, 1.8, 10);
+  flashlight.intensity = 5;
+  // reset items
+  items.forEach(i => scene.remove(i));
+  items.length = 0;
+  for (let i = 0; i < 8; i++) {
+    const x = (Math.random()-0.5)*150;
+    const z = (Math.random()-0.5)*150;
+    spawnItem(i < 4 ? 'battery' : 'medkit', x, z);
+  }
+  // reset classmates
+  classmates.forEach(c => scene.remove(c.mesh));
+  classmates.length = 0;
+  for (let i = 0; i < 3; i++) classmates.push(createClassmate((i-1)*2, -5));
+  // reset wolves
+  wolves.forEach(w => scene.remove(w.mesh));
+  wolves.length = 0;
+  scene.fog = new THREE.Fog('#c0d0d0', 10, 80);
+  closeAll();
+  hud.classList.remove('hidden');
+  updateUI();
+  controls.lock();
+  showDialogue('You wake up alone. Your classmates are nearby.');
+}
+function closeAll() {
+  [mainMenu, introCutscene, pauseMenu, deathScreen, winScreen].forEach(el => el.classList.add('hidden'));
+}
+function pauseGame() { state.isPaused = true; pauseMenu.classList.remove('hidden'); controls.unlock(); }
+function resumeGame() { state.isPaused = false; pauseMenu.classList.add('hidden'); controls.lock(); }
+
+// ========== EVENT LISTENERS ==========
 document.getElementById('new-game-btn').addEventListener('click', () => {
+  initAudio();
   closeAll(); introCutscene.classList.remove('hidden');
   typewriter.textContent = ''; clickToStart.classList.add('hidden');
-  const story = 'The school bus broke down on the forest road. As the others argued, you slipped into the trees…';
+  const story = 'The school bus crashed. You stumble into the woods. Your friends are calling your name...';
   let i = 0;
   const interval = setInterval(() => {
     typewriter.textContent += story[i];
     i++;
     if (i >= story.length) { clearInterval(interval); clickToStart.classList.remove('hidden'); }
-  }, 50);
+  }, 40);
 });
 clickToStart.addEventListener('click', startNewGame);
-
-// Fallback: if the canvas is clicked while playing and not locked, lock it
-renderer.domElement.addEventListener('click', () => {
-  if (state.isPlaying && !state.isPaused && !state.isDead && !state.isWon && !controls.isLocked) {
-    controls.lock();
-  }
-});
-
-document.getElementById('continue-btn').addEventListener('click', () => {
-  if (!loadGame()) { addMessage('No saved game. Starting new.'); startNewGame(); }
-  else { closeAll(); hud.classList.remove('hidden'); state.isPlaying = true; state.isPaused = false; controls.lock(); }
-});
-document.getElementById('load-btn').addEventListener('click', () => {
-  if (loadGame()) { closeAll(); hud.classList.remove('hidden'); state.isPlaying = true; state.isPaused = false; controls.lock(); }
-  else alert('No save found!');
-});
-document.getElementById('settings-btn').addEventListener('click', () => { closeAll(); settingsMenu.classList.remove('hidden'); });
-document.getElementById('credits-btn').addEventListener('click', () => { closeAll(); creditsMenu.classList.remove('hidden'); });
+document.getElementById('continue-btn').addEventListener('click', () => { /* not implemented */ });
 document.getElementById('quit-btn').addEventListener('click', () => window.close());
 document.getElementById('resume-btn').addEventListener('click', resumeGame);
-document.getElementById('save-btn').addEventListener('click', saveGame);
-document.getElementById('pause-quit-btn').addEventListener('click', () => { state.isPlaying = false; controls.unlock(); showMainMenu(); });
+document.getElementById('save-btn').addEventListener('click', () => alert('Save not implemented.'));
+document.getElementById('pause-quit-btn').addEventListener('click', () => {
+  state.isPlaying = false; controls.unlock(); showMainMenu();
+});
+function showMainMenu() { closeAll(); mainMenu.classList.remove('hidden'); hud.classList.add('hidden'); }
 document.getElementById('restart-btn').addEventListener('click', startNewGame);
 document.getElementById('death-quit-btn').addEventListener('click', showMainMenu);
 document.getElementById('win-restart-btn').addEventListener('click', startNewGame);
 document.getElementById('win-quit-btn').addEventListener('click', showMainMenu);
-document.getElementById('back-from-settings').addEventListener('click', showMainMenu);
-document.getElementById('back-from-credits').addEventListener('click', showMainMenu);
+controls.addEventListener('unlock', () => { if (state.isPlaying && !state.isPaused) pauseGame(); });
 
-controls.addEventListener('unlock', () => {
-  if (state.isPlaying && !state.isPaused && !state.isDead && !state.isWon) pauseGame();
-});
-
-// Right click to use item
+// Right click to use survival kit
 document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('mousedown', (e) => {
-  if (e.button === 2 && state.isPlaying && !state.isPaused && !state.isDead && !state.isWon) {
-    useInventoryItem(state.selectedSlot);
+document.addEventListener('mousedown', e => {
+  if (e.button === 2 && state.isPlaying && state.inventory.survivalKits > 0) {
+    state.inventory.survivalKits--;
+    state.health = Math.min(100, state.health + 50);
+    state.fear = Math.max(0, state.fear - 30);
+    showDialogue('Used a Survival Kit!');
+    updateUI();
   }
 });
-function useInventoryItem(slot) {
-  const item = state.inventory[slot];
-  if (item.quantity <= 0) return;
-  switch (item.name) {
-    case 'Flashlight': toggleFlashlight(); break;
-    case 'Water': state.thirst = Math.min(100, state.thirst + 35); item.quantity--; addMessage('Drank water.'); break;
-    case 'Food': state.hunger = Math.min(100, state.hunger + 40); item.quantity--; addMessage('Ate food.'); break;
-    case 'Distraction': addMessage('Distraction thrown!'); item.quantity--; break;
-    case 'Repellent': state.sanity += 25; item.quantity--; addMessage('Repellent used. Sanity restored.'); break;
-  }
-  updateInventoryUI();
-}
 
-// ========== GAME LOOP ==========
+// ========== LOOP ==========
 let lastTime = performance.now();
-generateWorld();
-updateInventoryUI();
-memoryCount.textContent = '0';
 showMainMenu();
-setTimeout(() => { loadingScreen.style.display = 'none'; }, 2000);
+setTimeout(() => { loadingScreen.style.display = 'none'; }, 1500);
 
-function animate(timestamp) {
+function animate(time) {
   requestAnimationFrame(animate);
-  const delta = Math.min(0.1, (timestamp - lastTime) / 1000);
-  lastTime = timestamp;
-  updatePlayer(delta);
-  updateSurvival(delta);
-  updateTime(delta);
-  updateHUD();
-  if (window.fragments) {
-    window.fragments.forEach(f => { if (!f.userData.collected) f.rotation.y += delta * 1.5; });
+  const delta = Math.min(0.1, (time - lastTime) / 1000);
+  lastTime = time;
+  if (state.isPlaying && !state.isPaused) {
+    updatePlayer(delta);
+    updateClassmates(delta);
+    updateWolves(delta);
+    updateTimedEvents(delta);
+    // fear increase
+    state.fear += delta * 2;
+    if (state.flashlightOn) state.flashlightBattery = Math.max(0, state.flashlightBattery - delta * 3);
+    if (state.flashlightBattery <= 0) { state.flashlightOn = false; flashlight.intensity = 0; }
+    if (state.fear > 80) scene.fog.density = 0.025;
+    else scene.fog.density = 0.005;
+    checkChoices();
+    updateUI();
   }
   renderer.render(scene, camera);
 }
