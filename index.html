@@ -23,9 +23,6 @@
     <h1 class="menu-title">EARS OF THE FOREST</h1>
     <button id="new-game-btn">New Game</button>
     <button id="continue-btn">Continue</button>
-    <button id="load-btn">Load Game</button>
-    <button id="settings-btn">Settings</button>
-    <button id="credits-btn">Credits</button>
     <button id="quit-btn">Quit</button>
   </div>
 
@@ -44,24 +41,21 @@
 
   <!-- HUD -->
   <div id="hud" class="hidden">
-    <div class="hud-bars">
-      <div class="bar-wrapper"><span class="bar-label">Health</span><div class="bar-bg"><div id="health-bar" class="bar-fill health"></div></div></div>
-      <div class="bar-wrapper"><span class="bar-label">Sanity</span><div class="bar-bg"><div id="sanity-bar" class="bar-fill sanity"></div></div></div>
-      <div class="bar-wrapper"><span class="bar-label">Hunger</span><div class="bar-bg"><div id="hunger-bar" class="bar-fill hunger"></div></div></div>
-      <div class="bar-wrapper"><span class="bar-label">Thirst</span><div class="bar-bg"><div id="thirst-bar" class="bar-fill thirst"></div></div></div>
-      <div class="bar-wrapper"><span class="bar-label">Stamina</span><div class="bar-bg"><div id="stamina-bar" class="bar-fill stamina"></div></div></div>
-      <div class="bar-wrapper"><span class="bar-label">Temp</span><div class="bar-bg"><div id="temp-bar" class="bar-fill temperature"></div></div></div>
+    <div class="hud-top">
+      <div class="health-bar"><span>Health</span><div class="bar-bg"><div id="health-fill" class="bar-fill health"></div></div></div>
+      <div class="fear-bar"><span>Fear</span><div class="bar-bg"><div id="fear-fill" class="bar-fill fear"></div></div></div>
+      <div class="battery-bar"><span>Flashlight</span><div class="bar-bg"><div id="battery-fill" class="bar-fill battery"></div></div></div>
     </div>
-    <div id="inventory-ui">
-      <div class="inv-slot" data-slot="0">🔦</div>
-      <div class="inv-slot" data-slot="1">💧</div>
-      <div class="inv-slot" data-slot="2">🍞</div>
-      <div class="inv-slot" data-slot="3">🪶</div>
-      <div class="inv-slot" data-slot="4">🪵</div>
+    <div id="inventory-display">
+      <span class="inv-item">Batteries: <span id="battery-count">0</span></span>
+      <span class="inv-item">Medkits: <span id="medkit-count">0</span></span>
+      <span class="inv-item">Survival Kits: <span id="survival-count">0</span></span>
     </div>
-    <div id="memory-counter">Memories: <span id="memory-count">0</span>/12</div>
-    <div id="time-display">Day 1, 06:00</div>
-    <div id="message-log"></div>
+    <div id="dialogue-box">
+      <p id="dialogue-text"></p>
+    </div>
+    <div id="choice-buttons"></div>
+    <div id="compass">N</div>
   </div>
 
   <!-- PAUSE MENU -->
@@ -74,8 +68,8 @@
 
   <!-- DEATH SCREEN -->
   <div id="death-screen" class="overlay hidden">
-    <h2 class="menu-title death-title">The Forest Consumes You</h2>
-    <p class="ending-text">Your mind shattered, the whispers never stop.</p>
+    <h2 class="menu-title death-title">You Have Died</h2>
+    <p id="death-ending-text"></p>
     <button id="restart-btn">Try Again</button>
     <button id="death-quit-btn">Main Menu</button>
   </div>
@@ -83,21 +77,9 @@
   <!-- WIN SCREEN -->
   <div id="win-screen" class="overlay hidden">
     <h2 class="menu-title win-title">Escape</h2>
-    <p class="ending-text">You gather all memories and find the road out. The forest releases its grip.</p>
+    <p id="win-ending-text"></p>
     <button id="win-restart-btn">Play Again</button>
     <button id="win-quit-btn">Main Menu</button>
-  </div>
-
-  <!-- SETTINGS / CREDITS -->
-  <div id="settings-menu" class="overlay hidden">
-    <h2 class="menu-title">Settings</h2>
-    <p>Settings menu placeholder.</p>
-    <button id="back-from-settings">Back</button>
-  </div>
-  <div id="credits-menu" class="overlay hidden">
-    <h2 class="menu-title">Credits</h2>
-    <p>A game by You, in the darkness.</p>
-    <button id="back-from-credits">Back</button>
   </div>
 
   <script type="importmap">
