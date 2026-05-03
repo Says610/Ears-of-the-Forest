@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-// ===================== DOM ELEMENTS =====================
+// ========== DOM ==========
 const loadingScreen = document.getElementById('loading-screen');
 const mainMenu = document.getElementById('main-menu');
 const introCutscene = document.getElementById('intro-cutscene');
@@ -14,8 +14,6 @@ const settingsMenu = document.getElementById('settings-menu');
 const creditsMenu = document.getElementById('credits-menu');
 const messageLog = document.getElementById('message-log');
 const typewriter = document.getElementById('typewriter');
-
-// HUD bars
 const healthBar = document.getElementById('health-bar');
 const sanityBar = document.getElementById('sanity-bar');
 const hungerBar = document.getElementById('hunger-bar');
@@ -26,36 +24,24 @@ const memoryCount = document.getElementById('memory-count');
 const timeDisplay = document.getElementById('time-display');
 const inventorySlots = document.querySelectorAll('.inv-slot');
 
-// ===================== GAME STATE =====================
+// ========== GAME STATE ==========
 const state = {
-  isPlaying: false,
-  isPaused: false,
-  isDead: false,
-  isWon: false,
-  health: 100,
-  sanity: 100,
-  hunger: 85,
-  thirst: 90,
-  stamina: 100,
-  temperature: 70,
-  memoryFragments: 0,
-  totalFragments: 12,
-  day: 1,
-  timeOfDay: 360,
-  flashlightOn: true,
-  flashlightBattery: 100,
+  isPlaying: false, isPaused: false, isDead: false, isWon: false,
+  health: 100, sanity: 100, hunger: 85, thirst: 90, stamina: 100,
+  temperature: 70, memoryFragments: 0, totalFragments: 12,
+  day: 1, timeOfDay: 360,
+  flashlightOn: true, flashlightBattery: 100,
   selectedSlot: 0,
   inventory: [
     { name: 'Flashlight', icon: '🔦', quantity: Infinity },
-    { name: 'Water', icon: '💧', quantity: 3 },
-    { name: 'Food', icon: '🍞', quantity: 2 },
+    { name: 'Water',     icon: '💧', quantity: 3 },
+    { name: 'Food',      icon: '🍞', quantity: 2 },
     { name: 'Distraction', icon: '🪶', quantity: 2 },
-    { name: 'Repellent', icon: '🪵', quantity: 1 },
+    { name: 'Repellent',   icon: '🪵', quantity: 1 },
   ],
-  forestMood: 'neutral',
 };
 
-// ===================== THREE.JS SETUP =====================
+// ========== THREE.JS SETUP ==========
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -65,18 +51,20 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2('#1a1a2e', 0.0003);
+// Linear fog for better depth visibility
+scene.fog = new THREE.Fog('#1a1a2e', 30, 150);
 scene.background = new THREE.Color('#1a1a2e');
 
 const camera = new THREE.PerspectiveCamera(78, window.innerWidth / window.innerHeight, 0.5, 300);
 camera.position.set(0, 1.8, 0);
+camera.lookAt(0, 1.8, -10);
 
 const controls = new PointerLockControls(camera, document.body);
 
 // Lights
-const ambientLight = new THREE.AmbientLight('#445566', 0.7);
+const ambientLight = new THREE.AmbientLight('#445566', 1.0);
 scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight('#ffe8cc', 1.6);
+const directionalLight = new THREE.DirectionalLight('#ffe8cc', 2.2);
 directionalLight.position.set(60, 70, 30);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 2048;
@@ -98,16 +86,16 @@ playerFlashlight.shadow.camera.far = 40;
 scene.add(playerFlashlight);
 scene.add(playerFlashlight.target);
 
-// ===================== WORLD =====================
-const worldObjects = []; // for cleanup
+// ========== WORLD ==========
+const worldObjects = [];
 
 function getTerrainHeight(x, z) {
-  return Math.sin(x * 0.03) * Math.cos(z * 0.03) * 4 + Math.sin(x * 0.08 + z * 0.08) * 2 + Math.cos(x * 0.1) * 0.5;
+  return Math.sin(x * 0.03) * Math.cos(z * 0.03) * 4 + Math.sin(x * 0.08 + z * 0.08) * 2;
 }
 
 function generateWorld() {
-  // Ground
-  const groundGeo = new THREE.PlaneGeometry(280, 280, 120, 120);
+  // Ground (deformed plane)
+  const groundGeo = new THREE.PlaneGeometry(300, 300, 120, 120);
   groundGeo.rotateX(-Math.PI / 2);
   const pos = groundGeo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -116,7 +104,10 @@ function generateWorld() {
     pos.setZ(i, getTerrainHeight(x, z));
   }
   groundGeo.computeVertexNormals();
-  const groundMat = new THREE.MeshStandardMaterial({ color: '#2d4a22', roughness: 0.85, metalness: 0.05 });
+  const groundMat = new THREE.MeshStandardMaterial({
+    color: '#3d5e3c', roughness: 0.8, metalness: 0.1,
+    emissive: '#142010', emissiveIntensity: 0.3  // make it visible even in shadow
+  });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.receiveShadow = true;
   scene.add(ground);
@@ -124,28 +115,26 @@ function generateWorld() {
 
   // Trees
   for (let i = 0; i < 250; i++) {
-    const x = (Math.random() - 0.5) * 270;
-    const z = (Math.random() - 0.5) * 270;
+    const x = (Math.random() - 0.5) * 290;
+    const z = (Math.random() - 0.5) * 290;
     const y = getTerrainHeight(x, z);
     const tree = new THREE.Group();
     const trunkH = 2.5 + Math.random() * 3.5;
     const trunkGeo = new THREE.CylinderGeometry(0.2, 0.4, trunkH, 8);
     const trunk = new THREE.Mesh(trunkGeo, new THREE.MeshStandardMaterial({ color: '#4a3420', roughness: 0.9 }));
     trunk.position.y = trunkH / 2;
-    trunk.castShadow = true;
-    trunk.receiveShadow = true;
+    trunk.castShadow = true; trunk.receiveShadow = true;
     tree.add(trunk);
     for (let j = 0; j < 3; j++) {
       const coneGeo = new THREE.ConeGeometry(1.3 - j * 0.3, 1.8 - j * 0.3, 8);
       const cone = new THREE.Mesh(coneGeo, new THREE.MeshStandardMaterial({ color: '#1f4a1a', roughness: 0.6 }));
       cone.position.y = trunkH + j * 1.4;
-      cone.castShadow = true;
-      cone.receiveShadow = true;
+      cone.castShadow = true; cone.receiveShadow = true;
       tree.add(cone);
     }
     tree.position.set(x, y, z);
     tree.rotation.y = Math.random() * Math.PI * 2;
-    tree.scale.setScalar(0.9 + Math.random() * 0.6);
+    tree.scale.setScalar(0.8 + Math.random() * 0.6);
     scene.add(tree);
     worldObjects.push(tree);
   }
@@ -153,9 +142,9 @@ function generateWorld() {
   // Memory fragments
   window.fragments = [];
   for (let i = 0; i < state.totalFragments; i++) {
-    const fx = (Math.random() - 0.5) * 250;
-    const fz = (Math.random() - 0.5) * 250;
-    const fy = getTerrainHeight(fx, fz) + 1.5;
+    const fx = (Math.random() - 0.5) * 260;
+    const fz = (Math.random() - 0.5) * 260;
+    const fy = getTerrainHeight(fx, fz) + 1.8;
     const crystal = new THREE.Mesh(
       new THREE.OctahedronGeometry(0.6),
       new THREE.MeshStandardMaterial({ color: '#ffdd55', roughness: 0.1, metalness: 0.7, emissive: '#ffaa00', emissiveIntensity: 2 })
@@ -173,7 +162,7 @@ function clearWorld() {
   worldObjects.length = 0;
 }
 
-// ===================== PLAYER =====================
+// ========== PLAYER CONTROLS ==========
 const keys = { w: false, a: false, s: false, d: false, shift: false, space: false };
 document.addEventListener('keydown', (e) => {
   switch (e.code) {
@@ -212,48 +201,38 @@ function toggleFlashlight() {
 
 let verticalVelocity = 0;
 const GRAVITY = -20;
-
 function updatePlayer(delta) {
   if (!state.isPlaying || state.isPaused || state.isDead || state.isWon) return;
-  
   const sprintMult = (keys.shift && state.stamina > 0) ? 1.8 : 1;
   const speed = 5.5 * sprintMult * delta;
   if (keys.shift && state.stamina > 0) state.stamina = Math.max(0, state.stamina - 20 * delta);
   else state.stamina = Math.min(100, state.stamina + 12 * delta);
-  
+
   const moveDir = new THREE.Vector3();
   if (keys.w) moveDir.add(new THREE.Vector3(0,0,-1));
   if (keys.s) moveDir.add(new THREE.Vector3(0,0,1));
   if (keys.a) moveDir.add(new THREE.Vector3(-1,0,0));
   if (keys.d) moveDir.add(new THREE.Vector3(1,0,0));
   if (moveDir.length() > 0) moveDir.normalize().applyQuaternion(camera.quaternion);
-  
+
   const newPos = camera.position.clone();
   newPos.x += moveDir.x * speed;
   newPos.z += moveDir.z * speed;
-  
   const groundY = getTerrainHeight(newPos.x, newPos.z);
   const targetY = groundY + 1.8;
-  
-  if (keys.space && Math.abs(camera.position.y - targetY) < 0.15) {
-    verticalVelocity = 5;
-  }
+
+  if (keys.space && Math.abs(camera.position.y - targetY) < 0.15) verticalVelocity = 5;
   verticalVelocity += GRAVITY * delta;
   newPos.y += verticalVelocity * delta;
-  if (newPos.y <= targetY) {
-    newPos.y = targetY;
-    verticalVelocity = 0;
-  }
-  
+  if (newPos.y <= targetY) { newPos.y = targetY; verticalVelocity = 0; }
   camera.position.copy(newPos);
-  
-  // Flashlight follows camera
+
   playerFlashlight.position.copy(camera.position);
   const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
   playerFlashlight.target.position.copy(camera.position).add(dir.multiplyScalar(20));
 }
 
-// ===================== INTERACTION =====================
+// ========== INTERACTION ==========
 function tryInteract() {
   if (!state.isPlaying || state.isPaused) return;
   for (const frag of window.fragments) {
@@ -275,25 +254,20 @@ function collectFragment(frag) {
   if (state.memoryFragments >= state.totalFragments) winGame();
 }
 
-// ===================== SURVIVAL =====================
+// ========== SURVIVAL ==========
 function updateSurvival(delta) {
   if (!state.isPlaying || state.isPaused || state.isDead || state.isWon) return;
-  
   state.hunger = Math.max(0, state.hunger - delta * 1.2);
   state.thirst = Math.max(0, state.thirst - delta * 1.5);
   const isNight = state.timeOfDay < 360 || state.timeOfDay > 1080;
   state.temperature += (isNight ? -delta * 5 : delta * 2);
   state.temperature = THREE.MathUtils.clamp(state.temperature, 10, 100);
-  
   const darknessFactor = state.flashlightOn ? 0.1 : (isNight ? 0.7 : 0.15);
   state.sanity = Math.max(0, state.sanity - delta * darknessFactor * 6);
-  
   if (state.hunger < 10) state.health -= delta * 5;
   if (state.thirst < 10) state.health -= delta * 6;
   if (state.temperature < 25) state.health -= delta * 4;
-  
   if (state.health <= 0) { state.health = 0; die(); }
-  
   if (state.sanity < 25 && Math.random() < delta * 0.8) addMessage('...don\'t look back...');
   if (state.sanity < 15) {
     camera.position.x += (Math.random() - 0.5) * 0.04;
@@ -301,7 +275,7 @@ function updateSurvival(delta) {
   }
 }
 
-// ===================== DAY/NIGHT =====================
+// ========== TIME ==========
 function updateTime(delta) {
   if (!state.isPlaying || state.isPaused || state.isDead || state.isWon) return;
   state.timeOfDay += delta * 2;
@@ -309,16 +283,16 @@ function updateTime(delta) {
   const hours = Math.floor(state.timeOfDay / 60);
   const mins = Math.floor(state.timeOfDay % 60);
   timeDisplay.textContent = `Day ${state.day}, ${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
-  
   const sunAngle = (state.timeOfDay / 1440) * Math.PI * 2;
   const sunHeight = Math.sin(sunAngle);
   const dayFactor = Math.max(0.1, sunHeight * 0.8 + 0.5);
-  ambientLight.intensity = 0.15 + dayFactor * 0.7;
-  directionalLight.intensity = dayFactor * 1.8;
-  scene.background = new THREE.Color(0.05 + dayFactor * 0.3, 0.1 + dayFactor * 0.2, 0.18 + dayFactor * 0.4);
+  ambientLight.intensity = 0.3 + dayFactor * 0.8;
+  directionalLight.intensity = dayFactor * 2;
+  // Sky colour
+  scene.background = new THREE.Color(0.05 + dayFactor * 0.4, 0.1 + dayFactor * 0.3, 0.2 + dayFactor * 0.5);
 }
 
-// ===================== UI =====================
+// ========== UI ==========
 function updateHUD() {
   healthBar.style.width = `${state.health}%`;
   sanityBar.style.width = `${state.sanity}%`;
@@ -327,33 +301,24 @@ function updateHUD() {
   staminaBar.style.width = `${state.stamina}%`;
   tempBar.style.width = `${state.temperature}%`;
 }
-
 function updateInventoryUI() {
   inventorySlots.forEach((slot, idx) => {
     slot.classList.toggle('active', idx === state.selectedSlot);
     slot.textContent = state.inventory[idx].icon;
   });
 }
-
 function addMessage(text) {
   const msg = document.createElement('div');
   msg.className = 'message';
   msg.textContent = text;
   messageLog.appendChild(msg);
   requestAnimationFrame(() => msg.classList.add('show'));
-  setTimeout(() => {
-    msg.classList.remove('show');
-    setTimeout(() => msg.remove(), 600);
-  }, 4000);
+  setTimeout(() => { msg.classList.remove('show'); setTimeout(() => msg.remove(), 600); }, 4000);
   while (messageLog.children.length > 5) messageLog.firstChild.remove();
 }
 
-// ===================== MENUS & FLOW =====================
-function showMainMenu() {
-  closeAll();
-  mainMenu.classList.remove('hidden');
-}
-
+// ========== MENUS ==========
+function showMainMenu() { closeAll(); mainMenu.classList.remove('hidden'); }
 function closeAll() {
   [mainMenu, introCutscene, hud, pauseMenu, deathScreen, winScreen, settingsMenu, creditsMenu].forEach(el => el.classList.add('hidden'));
 }
@@ -363,9 +328,8 @@ function startNewGame() {
   closeAll();
   hud.classList.remove('hidden');
   state.isPlaying = true;
-  controls.lock(); // Will be triggered by the click-to-start mechanic
+  controls.lock(); // will be triggered after user gesture
 }
-
 function resetState() {
   state.health = 100; state.sanity = 100; state.hunger = 85; state.thirst = 90; state.stamina = 100;
   state.temperature = 70; state.memoryFragments = 0; state.day = 1; state.timeOfDay = 360;
@@ -373,10 +337,10 @@ function resetState() {
   state.forestMood = 'neutral';
   state.inventory = [
     { name: 'Flashlight', icon: '🔦', quantity: Infinity },
-    { name: 'Water', icon: '💧', quantity: 3 },
-    { name: 'Food', icon: '🍞', quantity: 2 },
+    { name: 'Water',     icon: '💧', quantity: 3 },
+    { name: 'Food',      icon: '🍞', quantity: 2 },
     { name: 'Distraction', icon: '🪶', quantity: 2 },
-    { name: 'Repellent', icon: '🪵', quantity: 1 },
+    { name: 'Repellent',   icon: '🪵', quantity: 1 },
   ];
   state.selectedSlot = 0;
   clearWorld();
@@ -385,47 +349,19 @@ function resetState() {
   memoryCount.textContent = '0';
 }
 
-function die() {
-  state.isDead = true; state.isPlaying = false;
-  controls.unlock();
-  closeAll(); deathScreen.classList.remove('hidden');
-}
-
-function winGame() {
-  state.isWon = true; state.isPlaying = false;
-  controls.unlock();
-  closeAll(); winScreen.classList.remove('hidden');
-}
-
-function pauseGame() {
-  state.isPaused = true;
-  pauseMenu.classList.remove('hidden');
-  controls.unlock();
-}
-
-function resumeGame() {
-  state.isPaused = false;
-  pauseMenu.classList.add('hidden');
-  controls.lock();
-}
-
-function saveGame() {
-  localStorage.setItem('earsOfTheForest_save', JSON.stringify(state));
-  addMessage('Game saved.');
-}
-
+function die() { state.isDead = true; state.isPlaying = false; controls.unlock(); closeAll(); deathScreen.classList.remove('hidden'); }
+function winGame() { state.isWon = true; state.isPlaying = false; controls.unlock(); closeAll(); winScreen.classList.remove('hidden'); }
+function pauseGame() { state.isPaused = true; pauseMenu.classList.remove('hidden'); controls.unlock(); }
+function resumeGame() { state.isPaused = false; pauseMenu.classList.add('hidden'); controls.lock(); }
+function saveGame() { localStorage.setItem('earsOfTheForest_save', JSON.stringify(state)); addMessage('Game saved.'); }
 function loadGame() {
   const saved = localStorage.getItem('earsOfTheForest_save');
   if (!saved) return false;
   Object.assign(state, JSON.parse(saved));
   clearWorld();
   generateWorld();
-  // Remove already collected fragments
   for (let i = 0; i < state.memoryFragments; i++) {
-    if (window.fragments[i]) {
-      window.fragments[i].userData.collected = true;
-      scene.remove(window.fragments[i]);
-    }
+    if (window.fragments[i]) { window.fragments[i].userData.collected = true; scene.remove(window.fragments[i]); }
   }
   memoryCount.textContent = state.memoryFragments;
   updateHUD(); updateInventoryUI();
@@ -433,45 +369,34 @@ function loadGame() {
   return true;
 }
 
-// ===================== EVENT BINDINGS =====================
+// ========== EVENTS ==========
 document.getElementById('new-game-btn').addEventListener('click', () => {
-  closeAll();
-  introCutscene.classList.remove('hidden');
-  typewriter.textContent = '';
-  clickToStart.classList.add('hidden');
+  closeAll(); introCutscene.classList.remove('hidden');
+  typewriter.textContent = ''; clickToStart.classList.add('hidden');
   const story = 'The school bus broke down on the forest road. As the others argued, you slipped into the trees…';
   let i = 0;
   const interval = setInterval(() => {
     typewriter.textContent += story[i];
     i++;
-    if (i >= story.length) {
-      clearInterval(interval);
-      clickToStart.classList.remove('hidden');
-    }
+    if (i >= story.length) { clearInterval(interval); clickToStart.classList.remove('hidden'); }
   }, 50);
 });
+clickToStart.addEventListener('click', startNewGame);
 
-// Click to start – crucial for pointer lock
-document.getElementById('click-to-start').addEventListener('click', () => {
-  startNewGame();
-});
-
-document.getElementById('continue-btn').addEventListener('click', () => {
-  if (!loadGame()) {
-    addMessage('No saved game found. Starting new adventure.');
-    startNewGame();
-  } else {
-    closeAll(); hud.classList.remove('hidden');
-    state.isPlaying = true; state.isPaused = false;
+// Fallback: if the canvas is clicked while playing and not locked, lock it
+renderer.domElement.addEventListener('click', () => {
+  if (state.isPlaying && !state.isPaused && !state.isDead && !state.isWon && !controls.isLocked) {
     controls.lock();
   }
 });
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  if (!loadGame()) { addMessage('No saved game. Starting new.'); startNewGame(); }
+  else { closeAll(); hud.classList.remove('hidden'); state.isPlaying = true; state.isPaused = false; controls.lock(); }
+});
 document.getElementById('load-btn').addEventListener('click', () => {
-  if (loadGame()) {
-    closeAll(); hud.classList.remove('hidden');
-    state.isPlaying = true; state.isPaused = false;
-    controls.lock();
-  } else alert('No save found!');
+  if (loadGame()) { closeAll(); hud.classList.remove('hidden'); state.isPlaying = true; state.isPaused = false; controls.lock(); }
+  else alert('No save found!');
 });
 document.getElementById('settings-btn').addEventListener('click', () => { closeAll(); settingsMenu.classList.remove('hidden'); });
 document.getElementById('credits-btn').addEventListener('click', () => { closeAll(); creditsMenu.classList.remove('hidden'); });
@@ -490,7 +415,7 @@ controls.addEventListener('unlock', () => {
   if (state.isPlaying && !state.isPaused && !state.isDead && !state.isWon) pauseGame();
 });
 
-// Inventory usage on right click
+// Right click to use item
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('mousedown', (e) => {
   if (e.button === 2 && state.isPlaying && !state.isPaused && !state.isDead && !state.isWon) {
@@ -510,29 +435,25 @@ function useInventoryItem(slot) {
   updateInventoryUI();
 }
 
-// ===================== GAME LOOP =====================
+// ========== GAME LOOP ==========
 let lastTime = performance.now();
 generateWorld();
 updateInventoryUI();
 memoryCount.textContent = '0';
 showMainMenu();
-
 setTimeout(() => { loadingScreen.style.display = 'none'; }, 2000);
 
 function animate(timestamp) {
   requestAnimationFrame(animate);
   const delta = Math.min(0.1, (timestamp - lastTime) / 1000);
   lastTime = timestamp;
-  
   updatePlayer(delta);
   updateSurvival(delta);
   updateTime(delta);
   updateHUD();
-  
   if (window.fragments) {
     window.fragments.forEach(f => { if (!f.userData.collected) f.rotation.y += delta * 1.5; });
   }
-  
   renderer.render(scene, camera);
 }
 animate(performance.now());
